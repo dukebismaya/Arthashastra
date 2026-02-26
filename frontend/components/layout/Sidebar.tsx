@@ -35,7 +35,7 @@ const navItems = [
     },
     {
         label: "Market Intel",
-        href: "/market-intelligence",
+        href: "/market-intel",
         icon: Newspaper,
         description: "Live News Analysis",
     },

@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import {
   TrendingUp,
   Brain,
@@ -13,7 +16,9 @@ import {
   Clock,
   ChevronRight,
   LineChart,
+  Wallet,
 } from "lucide-react";
+import LiveTickerCard from "@/components/dashboard/LiveTickerCard";
 
 /* ── Mini Sparkline Component ───────────────────── */
 function Sparkline({ data, color, id }: { data: number[]; color: string; id: string }) {
@@ -71,6 +76,32 @@ function MiniBarChart({ data, color }: { data: number[]; color: string }) {
 }
 
 export default function Home() {
+  const [balance, setBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function syncWalletBalance() {
+      try {
+        if (typeof window !== "undefined" && (window as any).ethereum) {
+          const accounts: string[] = await (window as any).ethereum.request({
+            method: "eth_accounts",
+          });
+          if (accounts[0]) {
+            const res = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/api/v1/user/${accounts[0]}`
+            );
+            if (res.ok) {
+              const data = await res.json();
+              setBalance(data.portfolio_balance);
+            }
+          }
+        }
+      } catch {
+        /* wallet sync silently handled */
+      }
+    }
+    syncWalletBalance();
+  }, []);
+
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
       {/* ── Hero Header ─────────────────────────── */}
@@ -137,7 +168,16 @@ export default function Home() {
               <TrendingUp size={13} className="text-emerald-500" />
             </div>
           </div>
-          <p className="text-3xl font-extrabold text-slate-50 stat-value">₹24,89,921<span className="text-lg text-slate-500">.50</span></p>
+          <p className="text-3xl font-extrabold text-slate-50 stat-value">
+            {balance !== null ? (
+              <>₹{balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
+            ) : (
+              <span className="flex items-center gap-2 text-lg">
+                <Wallet size={18} className="text-slate-600" />
+                <span className="text-sm font-medium text-slate-600">Connect Wallet to sync</span>
+              </span>
+            )}
+          </p>
           <div className="mt-1 flex items-center gap-1.5">
             <div className="flex items-center gap-0.5 rounded-full bg-emerald-500/10 px-2 py-0.5">
               <ArrowUpRight size={12} className="text-emerald-500" />
@@ -370,24 +410,13 @@ export default function Home() {
           {/* Separator */}
           <div className="my-4 h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent" />
 
-          {/* Market Summary */}
+          {/* Live Market Summary */}
           <div className="rounded-xl bg-slate-800/20 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600 mb-3">Top Movers</p>
-            <div className="space-y-2">
-              {[
-                { ticker: "RELIANCE", price: "₹2,954.20", change: "+4.2%", up: true },
-                { ticker: "TCS", price: "₹3,982.30", change: "+1.8%", up: true },
-                { ticker: "HDFCBANK", price: "₹1,448.10", change: "-2.1%", up: false },
-              ].map((s, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <span className="text-[12px] font-bold text-slate-300 font-mono">{s.ticker}</span>
-                  <span className="text-[11px] text-slate-500 font-mono">{s.price}</span>
-                  <span className={`text-[11px] font-bold font-mono flex items-center gap-0.5 ${s.up ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {s.up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-                    {s.change}
-                  </span>
-                </div>
-              ))}
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600 mb-3">Top Movers — Live</p>
+            <div className="space-y-2.5">
+              <LiveTickerCard ticker="AAPL" />
+              <LiveTickerCard ticker="TSLA" />
+              <LiveTickerCard ticker="RELIANCE.NS" />
             </div>
           </div>
         </div>

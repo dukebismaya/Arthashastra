@@ -1,10 +1,26 @@
 "use client";
 
-import { Search, Wallet, Bell, User, Command, Globe } from "lucide-react";
+import { Search, Bell, User, Command, Globe } from "lucide-react";
 import { useState } from "react";
 
 export default function Navbar() {
     const [searchFocused, setSearchFocused] = useState(false);
+    const [walletAddress, setWalletAddress] = useState<string | null>(null);
+
+    async function connectWallet() {
+        if (typeof window !== "undefined" && (window as any).ethereum) {
+            try {
+                const accounts: string[] = await (window as any).ethereum.request({
+                    method: "eth_requestAccounts",
+                });
+                setWalletAddress(accounts[0]);
+            } catch {
+                /* wallet connection rejected */
+            }
+        } else {
+            alert("MetaMask not detected. Please install the MetaMask extension to connect your wallet.");
+        }
+    }
 
     return (
         <header className="sticky top-0 z-30 flex h-[64px] items-center justify-between gap-6 border-b border-slate-800/50 px-6 glass-strong">
@@ -68,10 +84,18 @@ export default function Navbar() {
                 {/* Divider */}
                 <div className="mx-1 h-7 w-px bg-gradient-to-b from-transparent via-slate-700/50 to-transparent" />
 
-                {/* Connect Wallet — Premium CTA */}
-                <button className="btn-gold flex items-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-semibold">
-                    <Wallet size={15} />
-                    <span>Connect Wallet</span>
+                {/* Connect Wallet — Native MetaMask */}
+                <button
+                    onClick={connectWallet}
+                    className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-semibold transition-premium ${
+                        walletAddress
+                            ? "border-2 border-yellow-500 text-yellow-400 bg-slate-800/50 hover:bg-slate-800/70"
+                            : "btn-gold"
+                    }`}
+                >
+                    {walletAddress
+                        ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+                        : "Connect Wallet"}
                 </button>
             </div>
         </header>

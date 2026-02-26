@@ -1,0 +1,35 @@
+# ── Python ──────────────────────────────────────
+myvenv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# ── Environment Variables ───────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Database ────────────────────────────────────
+*.db
+*.sqlite3
+
+# ── Node / Next.js ──────────────────────────────
+node_modules/
+.next/
+out/
+
+# ── IDE / OS ────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ── Misc ────────────────────────────────────────
+*.pem
+*.log

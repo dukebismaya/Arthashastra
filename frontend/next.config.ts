@@ -1,3 +1,5 @@
+import path from "node:path";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* ─── Production Domain Mapping ──────────────────────
@@ -20,6 +22,14 @@ const nextConfig = {
         ],
       },
     ];
+  },
+
+  /* ─── Turbopack — Root & Alias Fix ───────────────────
+   *  Explicitly set root to frontend/ so Turbopack resolves
+   *  node_modules from here, not the parent workspace.
+   * ──────────────────────────────────────────────────── */
+  turbopack: {
+    root: path.resolve(process.cwd()),
   },
 };
 
