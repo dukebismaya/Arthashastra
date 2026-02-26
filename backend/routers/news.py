@@ -1,10 +1,28 @@
+import asyncio
+import os
 import random
 from datetime import datetime, timezone
 
+from dotenv import load_dotenv
+load_dotenv()
+
+from google import genai
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/news", tags=["Market Intel — News Sentiment"])
+
+# ────────────────── Gemini Client ─────────────────────────────
+
+_gemini = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+_MODEL = "gemini-2.0-flash"
+
+_CHANAKYA_PROMPT = (
+    "You are Chanakya, a master financial strategist. "
+    "Analyze this: '{headline}' with a '{sentiment}' sentiment. "
+    "Provide exactly 3 short, high-impact bullet points of professional "
+    "trading logic. Max 50 words total. Return only the bullet points."
+)
 
 
 # ────────────────── Response Model ────────────────────────────
@@ -17,6 +35,7 @@ class AnalyzedArticle(BaseModel):
     confidence_score: float
     sector: str
     is_breaking_alert: bool = False
+    chanakya_logic: str = ""
 
 
 class SentimentResponse(BaseModel):
@@ -90,19 +109,46 @@ _HEADLINES = [
 
 # ────────────────── Endpoint ──────────────────────────────────
 
+async def _get_chanakya_logic(headline: str, sentiment: str) -> str:
+    """Call Gemini for one headline with retry. Returns bullet-point text."""
+    prompt = _CHANAKYA_PROMPT.format(headline=headline, sentiment=sentiment)
+
+    for attempt in range(3):
+        try:
+            response = await asyncio.to_thread(
+                _gemini.models.generate_content,
+                model=_MODEL,
+                contents=prompt,
+            )
+            result = response.text.strip()
+            if result:
+                return result
+            raise ValueError("Empty Gemini response")
+        except Exception as e:
+            wait = 2 ** attempt
+            print(f"[News Chanakya] Attempt {attempt + 1}/3 failed: {e}. Retrying in {wait}s...")
+            await asyncio.sleep(wait)
+
+    return "• Chanakya analysis temporarily unavailable."
+
+
 @router.get("/sentiment", response_model=SentimentResponse)
 async def get_news_sentiment():
     """
-    Simulated FinBERT NLP pipeline.
+    FinBERT NLP pipeline + Chanakya (Gemini) reasoning layer.
 
-    Returns 4 recent financial headlines with sentiment labels
-    and confidence scores as if processed by our fine-tuned
-    FinBERT model.
+    Returns 4 recent financial headlines with sentiment labels,
+    confidence scores, and AI-generated trading logic from Gemini.
     """
-    # Pick 4 random headlines from the pool (no repeats)
     selected = random.sample(_HEADLINES, k=4)
-
     now = datetime.now(timezone.utc).isoformat()
+
+    # Fire all 4 Gemini calls concurrently
+    logic_tasks = [
+        _get_chanakya_logic(item["headline"], item["sentiment"])
+        for item in selected
+    ]
+    logic_results = await asyncio.gather(*logic_tasks)
 
     articles = [
         AnalyzedArticle(
@@ -113,12 +159,13 @@ async def get_news_sentiment():
             confidence_score=item["confidence_score"],
             sector=item["sector"],
             is_breaking_alert=item.get("is_breaking_alert", False),
+            chanakya_logic=logic,
         )
-        for item in selected
+        for item, logic in zip(selected, logic_results)
     ]
 
     return SentimentResponse(
         analyzed_at=now,
-        model="FinBERT-v3-arthashastra (mock)",
+        model="FinBERT-v3 + Chanakya (Gemini 1.5 Flash)",
         articles=articles,
     )

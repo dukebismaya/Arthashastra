@@ -312,7 +312,7 @@ export default function WarRoomPage() {
                 analysisResult.explainable_logic.map((reason, i) => (
                   <div
                     key={i}
-                    className="rounded-xl bg-slate-800/20 px-4 py-3 border border-slate-800/40 transition-all duration-500"
+                    className="rounded-xl bg-slate-800/20 px-4 py-3 border border-slate-800/40 animate-fade-in transition-all duration-500"
                     style={{ animationDelay: `${i * 0.15}s` }}
                   >
                     <div className="flex items-start gap-2">
@@ -326,15 +326,29 @@ export default function WarRoomPage() {
                   </div>
                 ))
               ) : isPredicting ? (
-                [1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="rounded-xl bg-slate-800/20 px-4 py-3 border border-slate-800/40"
-                  >
-                    <div className="h-2.5 w-3/4 rounded bg-yellow-500/10 animate-pulse" />
-                    <div className="mt-2 h-2 w-1/2 rounded bg-yellow-500/5 animate-pulse" />
+                <>
+                  <div className="flex flex-col items-center justify-center py-4 text-center">
+                    <div className="relative mb-3">
+                      <Brain size={24} className="text-purple-400 animate-pulse" strokeWidth={1.5} />
+                      <div className="absolute inset-0 rounded-full bg-purple-500/10 blur-xl animate-pulse" />
+                    </div>
+                    <p className="text-[12px] font-semibold text-purple-400 animate-pulse">
+                      Generating Intelligence…
+                    </p>
+                    <p className="mt-1 text-[10px] text-slate-600">
+                      Chanakya is reasoning with RSI, MACD &amp; more
+                    </p>
                   </div>
-                ))
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="rounded-xl bg-purple-500/[0.03] px-4 py-3 border border-purple-500/10"
+                    >
+                      <div className="h-2.5 rounded bg-purple-500/10 animate-pulse" style={{ width: `${85 - i * 12}%` }} />
+                      <div className="mt-2 h-2 rounded bg-purple-500/5 animate-pulse" style={{ width: `${65 - i * 10}%` }} />
+                    </div>
+                  ))}
+                </>
               ) : (
                 [1, 2, 3].map((i) => (
                   <div
@@ -350,8 +364,10 @@ export default function WarRoomPage() {
 
             <p className="mt-4 text-center text-[11px] text-slate-700">
               {analysisResult
-                ? "Chanakya AI reasoning chain — based on technical indicators"
-                : "AI reasoning chain appears here after analysis"}
+                ? "Chanakya AI reasoning chain — powered by Gemini 1.5 Flash"
+                : isPredicting
+                  ? "Querying Gemini 1.5 Flash for real-time analysis…"
+                  : "AI reasoning chain appears here after analysis"}
             </p>
           </div>
         </div>

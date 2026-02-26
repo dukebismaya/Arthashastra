@@ -1,3 +1,11 @@
+import os
+
+from dotenv import load_dotenv
+
+# --------------- Load Environment ---------------
+# Must be called BEFORE importing routers (they read env vars at module level)
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
