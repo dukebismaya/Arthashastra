@@ -1,436 +1,369 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
 import {
-  TrendingUp,
   Brain,
-  ArrowUpRight,
-  ArrowDownRight,
-  Activity,
-  BarChart3,
-  Zap,
-  Shield,
-  Sparkles,
-  Eye,
-  Target,
-  Clock,
+  Swords,
+  Newspaper,
+  Vault,
+  GraduationCap,
   ChevronRight,
-  LineChart,
-  Wallet,
+  Shield,
+  Zap,
+  Eye,
+  ArrowUpRight,
 } from "lucide-react";
-import LiveTickerCard from "@/components/dashboard/LiveTickerCard";
 
-/* ── Mini Sparkline Component ───────────────────── */
-function Sparkline({ data, color, id }: { data: number[]; color: string; id: string }) {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const w = 120;
-  const h = 32;
-  const points = data
-    .map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * h}`)
-    .join(" ");
-  const areaPoints = `0,${h} ${points} ${w},${h}`;
+/* ═══════════════════════════════════════════════════════════
+   ANIMATION VARIANTS
+   ═══════════════════════════════════════════════════════════ */
 
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-8" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id={`grad-${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={areaPoints} fill={`url(#grad-${id})`} />
-      <polyline
-        points={points}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="sparkline-animate"
-      />
-    </svg>
-  );
-}
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.15, delayChildren: 0.3 } },
+};
 
-/* ── Mini Bar Chart Component ───────────────────── */
-function MiniBarChart({ data, color }: { data: number[]; color: string }) {
-  const max = Math.max(...data);
-  return (
-    <div className="flex items-end gap-[3px] h-8 w-full">
-      {data.map((v, i) => (
-        <div
-          key={i}
-          className="flex-1 rounded-sm bar-animate"
-          style={{
-            height: `${(v / max) * 100}%`,
-            backgroundColor: color,
-            opacity: 0.25 + (v / max) * 0.75,
-            animationDelay: `${i * 0.08}s`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
+  },
+};
+
+const fadeIn = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { duration: 0.8, ease: "easeOut" as const },
+  },
+};
+
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.85 },
+  show: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
+  },
+};
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE CARDS DATA
+   ═══════════════════════════════════════════════════════════ */
+
+const features = [
+  {
+    icon: Swords,
+    title: "War Room",
+    desc: "AI-powered predictions with Chanakya reasoner. Place directional bets with explainable confidence scores.",
+    href: "/war-room",
+    accent: "from-amber-500/20 to-amber-600/5",
+    ring: "ring-amber-500/20 hover:ring-amber-500/40",
+    iconColor: "text-amber-400",
+    glow: "group-hover:shadow-amber-500/10",
+  },
+  {
+    icon: Newspaper,
+    title: "Market Intel",
+    desc: "Real-time financial news aggregation. Sentiment analysis and breaking alert detection across global markets.",
+    href: "/market-intel",
+    accent: "from-blue-500/20 to-blue-600/5",
+    ring: "ring-blue-500/20 hover:ring-blue-500/40",
+    iconColor: "text-blue-400",
+    glow: "group-hover:shadow-blue-500/10",
+  },
+  {
+    icon: GraduationCap,
+    title: "Academy",
+    desc: "Master financial strategy through curated courses. Earn on-chain certificates and sharpen your edge.",
+    href: "/academy",
+    accent: "from-purple-500/20 to-purple-600/5",
+    ring: "ring-purple-500/20 hover:ring-purple-500/40",
+    iconColor: "text-purple-400",
+    glow: "group-hover:shadow-purple-500/10",
+  },
+  {
+    icon: Vault,
+    title: "Treasury",
+    desc: "Web3-native portfolio dashboard. View balances, manage deposits, and track every transaction on-chain.",
+    href: "/treasury",
+    accent: "from-emerald-500/20 to-emerald-600/5",
+    ring: "ring-emerald-500/20 hover:ring-emerald-500/40",
+    iconColor: "text-emerald-400",
+    glow: "group-hover:shadow-emerald-500/10",
+  },
+];
+
+/* ═══════════════════════════════════════════════════════════
+   STATS DATA
+   ═══════════════════════════════════════════════════════════ */
+
+const stats = [
+  { label: "AI Predictions / day", value: "2,400+" },
+  { label: "News Sources Tracked", value: "120+" },
+  { label: "Avg. Confidence Score", value: "87.3%" },
+  { label: "On-chain Certificates", value: "5,000+" },
+];
+
+/* ═══════════════════════════════════════════════════════════
+   COMPONENT
+   ═══════════════════════════════════════════════════════════ */
 
 export default function Home() {
-  const [balance, setBalance] = useState<number | null>(null);
-
-  useEffect(() => {
-    async function syncWalletBalance() {
-      try {
-        if (typeof window !== "undefined" && (window as any).ethereum) {
-          const accounts: string[] = await (window as any).ethereum.request({
-            method: "eth_accounts",
-          });
-          if (accounts[0]) {
-            const res = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL}/api/v1/user/${accounts[0]}`
-            );
-            if (res.ok) {
-              const data = await res.json();
-              setBalance(data.portfolio_balance);
-            }
-          }
-        }
-      } catch {
-        /* wallet sync silently handled */
-      }
-    }
-    syncWalletBalance();
-  }, []);
-
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto">
-      {/* ── Hero Header ─────────────────────────── */}
-      <section className="relative overflow-hidden rounded-2xl gradient-border p-8 animate-fade-in shimmer">
-        {/* Decorative elements */}
-        <div className="absolute -right-32 -top-32 h-72 w-72 rounded-full bg-yellow-500/[0.04] blur-3xl animate-float" />
-        <div className="absolute -bottom-20 -left-20 h-52 w-52 rounded-full bg-blue-500/[0.03] blur-3xl animate-float" style={{ animationDelay: '-3s' }} />
-        <div className="absolute right-20 top-10 h-1 w-1 rounded-full bg-yellow-500/40 sparkle" />
-        <div className="absolute right-40 bottom-12 h-1 w-1 rounded-full bg-yellow-500/30 sparkle" style={{ animationDelay: '1s' }} />
+    <div className="relative min-h-screen overflow-y-auto overflow-x-hidden">
+      {/* ═══════════ FLOATING ₹ HOLOGRAM BACKGROUND ═══════════ */}
+      <motion.div
+        className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none select-none"
+        aria-hidden
+      >
+        <motion.span
+          className="text-[42rem] font-black leading-none bg-gradient-to-b from-amber-500/[0.07] via-yellow-400/[0.04] to-transparent bg-clip-text text-transparent"
+          style={{ filter: "blur(8px)" }}
+          animate={{
+            y: [-10, 10, -10],
+            opacity: [0.5, 0.8, 0.5],
+          }}
+          transition={{
+            duration: 6,
+            ease: "easeInOut",
+            repeat: Infinity,
+          }}
+        >
+          ₹
+        </motion.span>
+      </motion.div>
 
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="relative h-2 w-2 rounded-full bg-emerald-500">
-              <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />
-            </div>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-500">
-              All Systems Operational
-            </span>
-          </div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-50 sm:text-5xl lg:text-6xl">
-            Arthashastra{" "}
-            <span className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
-              Command Center
-            </span>
-          </h1>
-          <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-slate-400">
-            Institutional-grade financial intelligence. Monitor portfolios,
-            predict markets, analyze live news, and master the art of strategic
-            wealth building — all from one unified dashboard.
-          </p>
+      {/* Radial glow behind the rupee */}
+      <div
+        className="fixed inset-0 z-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 50% 50% at 50% 50%, rgba(212,175,55,0.06) 0%, transparent 70%)",
+        }}
+      />
 
-          {/* Quick metrics bar */}
-          <div className="mt-6 flex flex-wrap items-center gap-6">
-            <div className="flex items-center gap-2 text-sm">
-              <Clock size={14} className="text-slate-600" />
-              <span className="text-slate-500">Last sync:</span>
-              <span className="text-slate-300 font-medium">Just now</span>
-            </div>
-            <div className="h-4 w-px bg-slate-800" />
-            <div className="flex items-center gap-2 text-sm">
-              <Eye size={14} className="text-slate-600" />
-              <span className="text-slate-500">Watching:</span>
-              <span className="text-slate-300 font-medium">42 assets</span>
-            </div>
-            <div className="h-4 w-px bg-slate-800" />
-            <div className="flex items-center gap-2 text-sm">
-              <Target size={14} className="text-slate-600" />
-              <span className="text-slate-500">Alerts active:</span>
-              <span className="text-yellow-500 font-medium">8</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Quick Stats Grid ────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Portfolio Value */}
-        <div className="glass-card rounded-2xl p-5 card-hover animate-fade-in delay-100">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
-              Portfolio Value
-            </span>
-            <div className="rounded-lg bg-emerald-500/10 p-1.5 ring-1 ring-emerald-500/20">
-              <TrendingUp size={13} className="text-emerald-500" />
-            </div>
-          </div>
-          <p className="text-3xl font-extrabold text-slate-50 stat-value">
-            {balance !== null ? (
-              <>₹{balance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
-            ) : (
-              <span className="flex items-center gap-2 text-lg">
-                <Wallet size={18} className="text-slate-600" />
-                <span className="text-sm font-medium text-slate-600">Connect Wallet to sync</span>
+      {/* ═══════════ CONTENT LAYER ═══════════ */}
+      <div className="relative z-10">
+        {/* ── HERO SECTION ──────────────────────── */}
+        <section className="flex flex-col items-center justify-center px-6 pt-20 pb-16 text-center">
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            animate="show"
+            className="max-w-4xl mx-auto"
+          >
+            {/* Badge */}
+            <motion.div variants={fadeUp} className="mb-8 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/5 px-4 py-1.5 backdrop-blur-sm">
+              <div className="relative h-2 w-2">
+                <div className="absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-60" />
+                <div className="relative h-2 w-2 rounded-full bg-amber-400" />
+              </div>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-400/90">
+                Decentralized Intelligence Engine
               </span>
-            )}
-          </p>
-          <div className="mt-1 flex items-center gap-1.5">
-            <div className="flex items-center gap-0.5 rounded-full bg-emerald-500/10 px-2 py-0.5">
-              <ArrowUpRight size={12} className="text-emerald-500" />
-              <span className="text-[11px] font-bold text-emerald-500">+12.4%</span>
-            </div>
-            <span className="text-[11px] text-slate-600">this month</span>
-          </div>
-          <div className="mt-3">
-            <Sparkline data={[20, 25, 22, 30, 28, 35, 32, 40, 38, 45, 42, 48]} color="#10b981" id="portfolio" />
-          </div>
-        </div>
+            </motion.div>
 
-        {/* Active Predictions */}
-        <div className="glass-card rounded-2xl p-5 card-hover animate-fade-in delay-200">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
-              Active Predictions
-            </span>
-            <div className="rounded-lg bg-yellow-500/10 p-1.5 ring-1 ring-yellow-500/20">
-              <Brain size={13} className="text-yellow-500" />
-            </div>
-          </div>
-          <p className="text-3xl font-extrabold text-slate-50 stat-value">17</p>
-          <div className="mt-1 flex items-center gap-1.5">
-            <div className="flex items-center gap-0.5 rounded-full bg-yellow-500/10 px-2 py-0.5">
-              <Zap size={12} className="text-yellow-500" />
-              <span className="text-[11px] font-bold text-yellow-500">5 high-conf</span>
-            </div>
-            <span className="text-[11px] text-slate-600">running now</span>
-          </div>
-          <div className="mt-3">
-            <MiniBarChart data={[3, 5, 2, 7, 4, 6, 8, 3, 5, 7, 4, 6]} color="#eab308" />
-          </div>
-        </div>
+            {/* Title */}
+            <motion.h1
+              variants={fadeUp}
+              className="text-6xl font-black tracking-tight sm:text-7xl lg:text-8xl xl:text-9xl"
+            >
+              <span className="block bg-gradient-to-b from-slate-100 via-slate-200 to-slate-400 bg-clip-text text-transparent gold-text-glow">
+                ARTHASHASTRA
+              </span>
+            </motion.h1>
 
-        {/* Win Rate */}
-        <div className="glass-card rounded-2xl p-5 card-hover animate-fade-in delay-300">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
-              Prediction Win Rate
-            </span>
-            <div className="rounded-lg bg-blue-500/10 p-1.5 ring-1 ring-blue-500/20">
-              <BarChart3 size={13} className="text-blue-500" />
-            </div>
-          </div>
-          <p className="text-3xl font-extrabold text-slate-50 stat-value">73.2<span className="text-lg text-slate-500">%</span></p>
-          <div className="mt-1 flex items-center gap-1.5">
-            <div className="flex items-center gap-0.5 rounded-full bg-emerald-500/10 px-2 py-0.5">
-              <ArrowUpRight size={12} className="text-emerald-500" />
-              <span className="text-[11px] font-bold text-emerald-500">+2.1%</span>
-            </div>
-            <span className="text-[11px] text-slate-600">vs last month</span>
-          </div>
-          <div className="mt-3">
-            <Sparkline data={[60, 62, 65, 63, 68, 66, 70, 69, 72, 71, 73, 73]} color="#3b82f6" id="winrate" />
-          </div>
-        </div>
+            {/* Decorative line */}
+            <motion.div variants={fadeIn} className="mx-auto mt-6 mb-6 flex items-center gap-3">
+              <div className="h-px flex-1 max-w-24 bg-gradient-to-r from-transparent to-amber-500/40" />
+              <Shield size={14} className="text-amber-500/60" />
+              <div className="h-px flex-1 max-w-24 bg-gradient-to-l from-transparent to-amber-500/40" />
+            </motion.div>
 
-        {/* Market Threat */}
-        <div className="glass-card rounded-2xl p-5 card-hover animate-fade-in delay-400">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
-              Market Threat Level
-            </span>
-            <div className="rounded-lg bg-orange-500/10 p-1.5 ring-1 ring-orange-500/20">
-              <Shield size={13} className="text-orange-500" />
-            </div>
-          </div>
-          <p className="text-3xl font-extrabold text-orange-400 stat-value">Moderate</p>
-          <div className="mt-1 flex items-center gap-1.5">
-            <div className="flex items-center gap-0.5 rounded-full bg-orange-500/10 px-2 py-0.5">
-              <Activity size={12} className="text-orange-400" />
-              <span className="text-[11px] font-bold text-orange-400">VIX 18.2</span>
-            </div>
-            <span className="text-[11px] text-slate-600">mixed sentiment</span>
-          </div>
-          <div className="mt-3">
-            <Sparkline data={[15, 18, 14, 22, 19, 16, 20, 17, 21, 18, 19, 18]} color="#f97316" id="threat" />
-          </div>
-        </div>
-      </div>
+            {/* Subtitle */}
+            <motion.p
+              variants={fadeUp}
+              className="mx-auto max-w-2xl text-lg leading-relaxed text-slate-400 sm:text-xl"
+            >
+              The Ultimate Engine for{" "}
+              <span className="text-amber-400/90 font-semibold">Decentralized Financial Intelligence</span>.
+              <br className="hidden sm:block" />
+              Predict markets. Decode news. Master strategy. Build wealth.
+            </motion.p>
 
-      {/* ── Main Content Grid ───────────────────── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Recent Activity — spans 2 cols */}
-        <div className="lg:col-span-2 glass-card rounded-2xl p-6 card-hover animate-fade-in delay-400">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.15em] text-slate-400">
-              <Activity size={15} className="text-yellow-500" />
-              Live Activity Feed
+            {/* CTA Buttons */}
+            <motion.div
+              variants={fadeUp}
+              className="mt-10 flex flex-wrap items-center justify-center gap-4"
+            >
+              <Link
+                href="/war-room"
+                className="group relative inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-7 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/30 hover:scale-[1.03] active:scale-[0.98]"
+              >
+                <Brain size={16} />
+                Enter the War Room
+                <ArrowUpRight
+                  size={14}
+                  className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                />
+              </Link>
+              <Link
+                href="/academy"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/30 px-7 py-3.5 text-sm font-semibold text-slate-300 backdrop-blur-sm transition-all duration-300 hover:border-slate-600 hover:bg-slate-800/50 hover:text-slate-100 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <GraduationCap size={16} />
+                Explore Academy
+              </Link>
+            </motion.div>
+          </motion.div>
+        </section>
+
+        {/* ── STATS BAR ─────────────────────────── */}
+        <motion.section
+          variants={stagger}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.5 }}
+          className="mx-auto max-w-5xl px-6 py-12"
+        >
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {stats.map((s) => (
+              <motion.div
+                key={s.label}
+                variants={scaleIn}
+                className="rounded-2xl border border-slate-800/50 bg-slate-900/40 p-5 text-center backdrop-blur-sm"
+              >
+                <p className="text-2xl font-extrabold text-slate-100 sm:text-3xl tracking-tight">
+                  {s.value}
+                </p>
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+                  {s.label}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
+
+        {/* ── FEATURE CARDS ─────────────────────── */}
+        <motion.section
+          variants={stagger}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.2 }}
+          className="mx-auto max-w-6xl px-6 pb-16"
+        >
+          <motion.div variants={fadeUp} className="text-center mb-12">
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-100 sm:text-4xl">
+              Your{" "}
+              <span className="bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">
+                Command Center
+              </span>
             </h2>
-            <button className="text-[11px] font-medium text-slate-600 hover:text-yellow-500 transition-smooth flex items-center gap-1">
-              View all <ChevronRight size={12} />
-            </button>
-          </div>
-          <div className="space-y-2">
-            {[
-              {
-                action: "Prediction Placed",
-                detail: "AAPL bullish — 85% confidence score",
-                time: "2m ago",
-                color: "emerald",
-                icon: Target,
-              },
-              {
-                action: "Breaking News Alert",
-                detail: "Federal Reserve minutes released — hawkish tone detected",
-                time: "15m ago",
-                color: "yellow",
-                icon: Zap,
-              },
-              {
-                action: "Portfolio Rebalanced",
-                detail: "Auto-reduced TSLA exposure by 5% based on risk model",
-                time: "1h ago",
-                color: "blue",
-                icon: LineChart,
-              },
-              {
-                action: "Academy Module Completed",
-                detail: "Options Greeks Deep Dive — Certificate earned",
-                time: "3h ago",
-                color: "purple",
-                icon: Sparkles,
-              },
-              {
-                action: "Price Alert Triggered",
-                detail: "BTC crossed ₹56,80,000 resistance level",
-                time: "4h ago",
-                color: "orange",
-                icon: ArrowUpRight,
-              },
-            ].map((item, i) => {
-              const Icon = item.icon;
-              const colorMap: Record<string, string> = {
-                emerald: "bg-emerald-500/10 text-emerald-500 ring-emerald-500/20",
-                yellow: "bg-yellow-500/10 text-yellow-500 ring-yellow-500/20",
-                blue: "bg-blue-500/10 text-blue-500 ring-blue-500/20",
-                purple: "bg-purple-500/10 text-purple-500 ring-purple-500/20",
-                orange: "bg-orange-500/10 text-orange-500 ring-orange-500/20",
-              };
-              const timeColorMap: Record<string, string> = {
-                emerald: "text-emerald-500",
-                yellow: "text-yellow-500",
-                blue: "text-blue-500",
-                purple: "text-purple-500",
-                orange: "text-orange-500",
-              };
-              return (
-                <div
-                  key={i}
-                  className="group flex items-center gap-4 rounded-xl bg-slate-800/20 px-4 py-3.5 transition-premium hover:bg-slate-800/40"
-                  style={{ animationDelay: `${0.5 + i * 0.1}s` }}
-                >
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ${colorMap[item.color]}`}>
-                    <Icon size={15} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-slate-200">{item.action}</p>
-                    <p className="text-[11px] text-slate-500 truncate">{item.detail}</p>
-                  </div>
-                  <span className={`text-[11px] font-medium ${timeColorMap[item.color]} shrink-0`}>
-                    {item.time}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+            <p className="mt-3 text-sm text-slate-500 max-w-xl mx-auto">
+              Four integrated modules — one unified intelligence platform.
+              Every tool a modern strategist needs, inspired by ancient wisdom.
+            </p>
+          </motion.div>
 
-        {/* Quick Actions — single col */}
-        <div className="glass-card rounded-2xl p-6 card-hover animate-fade-in delay-500">
-          <h2 className="flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-5">
-            <Zap size={15} className="text-yellow-500" />
-            Quick Actions
-          </h2>
-          <div className="space-y-2.5">
-            {[
-              {
-                label: "New Prediction",
-                desc: "Enter the War Room",
-                icon: Brain,
-                href: "/war-room",
-                accent: "group-hover:text-yellow-500 group-hover:bg-yellow-500/10 group-hover:ring-yellow-500/20",
-              },
-              {
-                label: "Analyze Stock",
-                desc: "Deep-dive any ticker",
-                icon: BarChart3,
-                href: "/market-intelligence",
-                accent: "group-hover:text-blue-500 group-hover:bg-blue-500/10 group-hover:ring-blue-500/20",
-              },
-              {
-                label: "Learn Strategy",
-                desc: "Open the Academy",
-                icon: Shield,
-                href: "/academy",
-                accent: "group-hover:text-purple-500 group-hover:bg-purple-500/10 group-hover:ring-purple-500/20",
-              },
-              {
-                label: "View Portfolio",
-                desc: "Check the Treasury",
-                icon: TrendingUp,
-                href: "/treasury",
-                accent: "group-hover:text-emerald-500 group-hover:bg-emerald-500/10 group-hover:ring-emerald-500/20",
-              },
-            ].map((item, i) => {
-              const Icon = item.icon;
+          <div className="grid gap-5 sm:grid-cols-2">
+            {features.map((f) => {
+              const Icon = f.icon;
               return (
-                <a
-                  key={i}
-                  href={item.href}
-                  className="group flex items-center gap-4 rounded-xl border border-slate-800/50 bg-slate-800/10 p-4 transition-premium hover:border-slate-700/50 hover:bg-slate-800/30 hover:shadow-lg"
-                >
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-800/50 ring-1 ring-slate-700/30 transition-premium ${item.accent}`}>
-                    <Icon size={18} className="text-slate-500 transition-premium group-hover:scale-110" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[13px] font-semibold text-slate-300 group-hover:text-slate-100 transition-smooth">
-                      {item.label}
+                <motion.div key={f.title} variants={fadeUp}>
+                  <Link
+                    href={f.href}
+                    className={`group relative flex flex-col rounded-2xl border bg-gradient-to-br ${f.accent} border-slate-800/40 p-6 ring-1 ${f.ring} backdrop-blur-sm transition-all duration-500 hover:shadow-2xl ${f.glow} hover:border-slate-700/60 hover:-translate-y-1`}
+                  >
+                    {/* icon */}
+                    <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900/60 ring-1 ring-slate-700/40 ${f.iconColor}`}>
+                      <Icon size={22} />
+                    </div>
+
+                    <h3 className="text-lg font-bold text-slate-100 group-hover:text-white transition-colors">
+                      {f.title}
+                    </h3>
+                    <p className="mt-2 text-[13px] leading-relaxed text-slate-400 group-hover:text-slate-300 transition-colors">
+                      {f.desc}
                     </p>
-                    <p className="text-[11px] text-slate-600">{item.desc}</p>
-                  </div>
-                  <ChevronRight size={14} className="text-slate-700 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-premium" />
-                </a>
+
+                    {/* arrow */}
+                    <div className="mt-5 flex items-center gap-1 text-[12px] font-semibold text-slate-500 group-hover:text-amber-400 transition-colors">
+                      Launch module
+                      <ChevronRight
+                        size={14}
+                        className="transition-transform group-hover:translate-x-1"
+                      />
+                    </div>
+                  </Link>
+                </motion.div>
               );
             })}
           </div>
+        </motion.section>
 
-          {/* Separator */}
-          <div className="my-4 h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent" />
-
-          {/* Live Market Summary */}
-          <div className="rounded-xl bg-slate-800/20 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600 mb-3">Top Movers — Live</p>
-            <div className="space-y-2.5">
-              <LiveTickerCard ticker="AAPL" />
-              <LiveTickerCard ticker="TSLA" />
-              <LiveTickerCard ticker="RELIANCE.NS" />
-            </div>
+        {/* ── PHILOSOPHY STRIP ──────────────────── */}
+        <motion.section
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1 }}
+          className="border-t border-b border-slate-800/50 bg-slate-900/30 backdrop-blur-sm"
+        >
+          <div className="mx-auto max-w-4xl px-6 py-16 text-center">
+            <blockquote className="text-xl font-medium italic text-slate-400 leading-relaxed sm:text-2xl">
+              &ldquo;Wealth, properly used, is a source of strength.
+              <br />
+              Misused, it is a source of destruction.&rdquo;
+            </blockquote>
+            <p className="mt-4 text-[12px] font-semibold uppercase tracking-[0.25em] text-amber-500/60">
+              — Kautilya, Arthashastra, c. 300 BCE
+            </p>
           </div>
-        </div>
-      </div>
+        </motion.section>
 
-      {/* ── Footer ──────────────────────────────── */}
-      <div className="pb-4 text-center animate-fade-in delay-600">
-        <div className="inline-flex items-center gap-2 rounded-full bg-slate-800/20 px-4 py-2">
-          <div className="h-1 w-1 rounded-full bg-yellow-500/50" />
-          <p className="text-[11px] font-medium text-slate-700">
-            Arthashastra v0.1.0 — The Art of Strategic Wealth
-          </p>
-          <div className="h-1 w-1 rounded-full bg-yellow-500/50" />
-        </div>
+        {/* ── BOTTOM CTA ────────────────────────── */}
+        <motion.section
+          variants={stagger}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.4 }}
+          className="mx-auto max-w-3xl px-6 py-20 text-center"
+        >
+          <motion.div variants={fadeUp}>
+            <Zap size={28} className="mx-auto mb-4 text-amber-500/70" />
+            <h3 className="text-2xl font-extrabold text-slate-100 sm:text-3xl tracking-tight">
+              Ready to deploy intelligence?
+            </h3>
+            <p className="mt-3 text-sm text-slate-500 max-w-lg mx-auto">
+              Connect your wallet, enter the War Room, and let Chanakya AI
+              guide your next strategic move.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+              <Link
+                href="/war-room"
+                className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-8 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/30 hover:scale-[1.03] active:scale-[0.98]"
+              >
+                <Eye size={16} />
+                Launch Platform
+              </Link>
+            </div>
+          </motion.div>
+        </motion.section>
+
+        {/* ── FOOTER ────────────────────────────── */}
+        <footer className="border-t border-slate-800/40 py-8 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full bg-slate-800/20 px-4 py-2">
+            <div className="h-1 w-1 rounded-full bg-amber-500/50" />
+            <p className="text-[11px] font-medium text-slate-600">
+              Arthashastra v0.1.0 — The Art of Strategic Wealth
+            </p>
+            <div className="h-1 w-1 rounded-full bg-amber-500/50" />
+          </div>
+        </footer>
       </div>
     </div>
   );

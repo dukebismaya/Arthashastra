@@ -15,7 +15,8 @@ router = APIRouter(prefix="/predict", tags=["Chanakya AI"])
 # ────────────────── Gemini Client ─────────────────────────────
 
 _gemini = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-_MODEL = "gemini-2.0-flash"
+# _MODEL = "gemini-2.0-flash"  # Rate limited / Quota exceeded
+_MODEL = "gemini-flash-latest" # Using latest stable flash model
 
 _CHANAKYA_PROMPT = (
     "You are Chanakya, a master financial strategist. "
@@ -117,7 +118,7 @@ async def _get_chanakya_reasoning(
 @router.post("/analyze", response_model=PredictionResponse)
 async def analyze_prediction(req: PredictionRequest):
     """
-    Chanakya AI analysis powered by Gemini 2.0 Flash.
+    Chanakya AI analysis powered by Gemini Flash (Latest).
 
     Fetches live price via yfinance, generates a confidence score,
     and returns Gemini-powered explainable reasoning.
