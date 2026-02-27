@@ -470,10 +470,11 @@ export default function Home() {
                   variants={idx % 2 === 0 ? slideInLeft : slideInRight}
                   onHoverStart={() => setHoveredFeature(idx)}
                   onHoverEnd={() => setHoveredFeature(null)}
+                  className="h-full"
                 >
                   <a
                     href={f.href}
-                    className={`group relative flex flex-col rounded-2xl border ${f.borderColor} bg-slate-900/20 backdrop-blur-sm p-7 transition-all duration-700 hover:shadow-2xl hover:-translate-y-1.5 overflow-hidden`}
+                    className={`group relative flex flex-col h-full rounded-2xl border ${f.borderColor} bg-slate-900/20 backdrop-blur-sm p-7 transition-all duration-700 hover:shadow-2xl hover:-translate-y-1.5 overflow-hidden`}
                   >
                     {/* Gradient overlay on hover */}
                     <div className={`absolute inset-0 bg-gradient-to-br ${f.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
@@ -491,7 +492,7 @@ export default function Home() {
                         {f.desc}
                       </p>
 
-                      <div className="mt-6 flex items-center gap-1.5 text-[12px] font-bold text-slate-600 group-hover:text-amber-400 transition-colors">
+                      <div className="mt-auto pt-6 flex items-center gap-1.5 text-[12px] font-bold text-slate-600 group-hover:text-amber-400 transition-colors">
                         Launch module
                         <ChevronRight size={14} className="transition-transform group-hover:translate-x-1" />
                       </div>
