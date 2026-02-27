@@ -1,414 +1,743 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   GraduationCap,
-  BookOpen,
-  Sparkles,
   Trophy,
-  CheckCircle2,
-  Loader2,
-  X,
   Coins,
+  Pickaxe,
+  CheckCircle2,
+  Lock,
+  Shield,
+  Sparkles,
   Zap,
+  BookOpen,
+  Brain,
+  Cpu,
+  TrendingUp,
+  ArrowUpRight,
+  Star,
 } from "lucide-react";
 
-/* ── Types ───────────────────────────────────────── */
-interface Course {
+/* ══════════════════════════════════════════════════════════
+   CONSTANTS & TYPES
+   ══════════════════════════════════════════════════════════ */
+
+const EXPO_OUT = [0.16, 1, 0.3, 1] as [number, number, number, number];
+const SPRING_SNAP = { stiffness: 280, damping: 28 };
+
+interface Quest {
   id: number;
+  category: string;
+  categoryColor: {
+    bg: string;
+    border: string;
+    text: string;
+    glow: string;
+    dot: string;
+  };
+  icon: React.ReactNode;
   title: string;
   description: string;
-  reward: number;
-  category: string;
+  reward: string;
+  rewardAmount: number;
+  xpReward: number;
+  difficulty: "Initiate" | "Strategist" | "Grandmaster";
+  modules: number;
 }
 
-/* ── Category styling map ────────────────────────── */
-const categoryStyle: Record<
-  string,
-  { bg: string; text: string; ring: string; dot: string }
+const QUESTS: Quest[] = [
+  {
+    id: 1,
+    category: "Web3",
+    categoryColor: {
+      bg: "rgba(139,92,246,0.08)",
+      border: "rgba(139,92,246,0.25)",
+      text: "#a78bfa",
+      glow: "rgba(139,92,246,0.15)",
+      dot: "#8b5cf6",
+    },
+    icon: <Shield size={22} />,
+    title: "Web3 Fundamentals",
+    description:
+      "Decode the architecture of decentralised finance. Master wallets, private keys, smart contract mechanics, and the immutable ledger that underpins the new financial order.",
+    reward: "500 $ARTHA",
+    rewardAmount: 500,
+    xpReward: 120,
+    difficulty: "Initiate",
+    modules: 5,
+  },
+  {
+    id: 2,
+    category: "AI",
+    categoryColor: {
+      bg: "rgba(59,130,246,0.08)",
+      border: "rgba(59,130,246,0.25)",
+      text: "#60a5fa",
+      glow: "rgba(59,130,246,0.15)",
+      dot: "#3b82f6",
+    },
+    icon: <Brain size={22} />,
+    title: "FinBERT Sentiment Analysis",
+    description:
+      "Wield the power of transformer-based NLP to decode market narratives. Learn how FinBERT extracts actionable signals from financial news and how Arthashastra integrates them.",
+    reward: "500 $ARTHA",
+    rewardAmount: 500,
+    xpReward: 150,
+    difficulty: "Strategist",
+    modules: 6,
+  },
+  {
+    id: 3,
+    category: "Investing",
+    categoryColor: {
+      bg: "rgba(16,185,129,0.08)",
+      border: "rgba(16,185,129,0.25)",
+      text: "#34d399",
+      glow: "rgba(16,185,129,0.15)",
+      dot: "#10b981",
+    },
+    icon: <TrendingUp size={22} />,
+    title: "Value Investing Principles",
+    description:
+      "Study the timeless frameworks of Graham, Buffett, and Munger through a Kautilyan lens. Understand intrinsic value, margin of safety, and moat identification.",
+    reward: "500 $ARTHA",
+    rewardAmount: 500,
+    xpReward: 130,
+    difficulty: "Strategist",
+    modules: 7,
+  },
+  {
+    id: 4,
+    category: "AI",
+    categoryColor: {
+      bg: "rgba(245,158,11,0.08)",
+      border: "rgba(245,158,11,0.25)",
+      text: "#fbbf24",
+      glow: "rgba(245,158,11,0.15)",
+      dot: "#f59e0b",
+    },
+    icon: <Cpu size={22} />,
+    title: "Chanakya AI: The Reasoner",
+    description:
+      "Go under the hood of Arthashastra's prediction engine. Master directional forecasting, confidence scoring, and the fusion of technical and fundamental signals via LLM reasoning.",
+    reward: "500 $ARTHA",
+    rewardAmount: 500,
+    xpReward: 200,
+    difficulty: "Grandmaster",
+    modules: 8,
+  },
+];
+
+const DIFFICULTY_STYLE: Record<
+  Quest["difficulty"],
+  { color: string; bg: string; border: string }
 > = {
-  Web3: {
-    bg: "bg-purple-500/10",
-    text: "text-purple-400",
-    ring: "ring-purple-500/20",
-    dot: "bg-purple-500",
+  Initiate: {
+    color: "#34d399",
+    bg: "rgba(16,185,129,0.08)",
+    border: "rgba(16,185,129,0.2)",
   },
-  Investing: {
-    bg: "bg-emerald-500/10",
-    text: "text-emerald-400",
-    ring: "ring-emerald-500/20",
-    dot: "bg-emerald-500",
+  Strategist: {
+    color: "#60a5fa",
+    bg: "rgba(59,130,246,0.08)",
+    border: "rgba(59,130,246,0.2)",
   },
-  "AI / ML": {
-    bg: "bg-blue-500/10",
-    text: "text-blue-400",
-    ring: "ring-blue-500/20",
-    dot: "bg-blue-500",
+  Grandmaster: {
+    color: "#fbbf24",
+    bg: "rgba(245,158,11,0.08)",
+    border: "rgba(245,158,11,0.2)",
   },
 };
 
-const fallbackStyle = {
-  bg: "bg-slate-500/10",
-  text: "text-slate-400",
-  ring: "ring-slate-500/20",
-  dot: "bg-slate-500",
-};
-
-/* ── Progress icon per category ──────────────────── */
-const categoryIcon: Record<string, React.ReactNode> = {
-  Web3: <Zap size={13} />,
-  Investing: <Coins size={13} />,
-  "AI / ML": <Sparkles size={13} />,
-};
+/* ══════════════════════════════════════════════════════════
+   MAIN PAGE
+   ══════════════════════════════════════════════════════════ */
 
 export default function AcademyPage() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [walletAddress, setWalletAddress] = useState("");
+  const [completedQuests, setCompletedQuests] = useState<number[]>([]);
+  const [mintingId, setMintingId] = useState<number | null>(null);
+  const [toastQuest, setToastQuest] = useState<Quest | null>(null);
 
-  /* Per-card state: "idle" | "completing" | "done" */
-  const [cardState, setCardState] = useState<Record<number, string>>({});
+  const totalEarned = completedQuests.length * 500;
+  const xpEarned = completedQuests.reduce((acc, id) => {
+    const q = QUESTS.find((q) => q.id === id);
+    return acc + (q?.xpReward ?? 0);
+  }, 0);
+  const XP_MAX = 800;
+  const XP_CURRENT = 600 + xpEarned;
+  const xpPct = Math.min((XP_CURRENT / XP_MAX) * 100, 100);
 
-  /* Toast */
-  const [toast, setToast] = useState<{
-    show: boolean;
-    title: string;
-    reward: number;
-    balance: number;
-  } | null>(null);
-
-  /* ── Fetch courses + wallet ────────────────────── */
-  useEffect(() => {
-    async function init() {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/academy/courses`);
-        if (res.ok) {
-          const data: Course[] = await res.json();
-          setCourses(data);
-        }
-      } catch {
-        /* course fetch silently handled */
-      } finally {
-        setLoading(false);
-      }
-
-      try {
-        if (typeof window !== "undefined" && (window as any).ethereum) {
-          const accounts: string[] = await (window as any).ethereum.request({
-            method: "eth_accounts",
-          });
-          if (accounts[0]) setWalletAddress(accounts[0]);
-        }
-      } catch {
-        /* wallet detection silently handled */
-      }
-    }
-    init();
-  }, []);
-
-  /* ── Complete course handler ───────────────────── */
-  async function handleComplete(course: Course) {
-    if (!walletAddress) return;
-    if (cardState[course.id] === "completing" || cardState[course.id] === "done")
-      return;
-
-    setCardState((prev) => ({ ...prev, [course.id]: "completing" }));
-
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/academy/complete/${course.id}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ wallet_address: walletAddress }),
-        }
-      );
-
-      if (res.ok) {
-        const data = await res.json();
-        setCardState((prev) => ({ ...prev, [course.id]: "done" }));
-        setToast({
-          show: true,
-          title: data.course_title,
-          reward: data.reward,
-          balance: data.new_balance,
-        });
-        setTimeout(() => setToast(null), 4500);
-      }
-    } catch {
-      setCardState((prev) => ({ ...prev, [course.id]: "idle" }));
-    }
+  async function handleClaimReward(id: number) {
+    if (completedQuests.includes(id) || mintingId !== null) return;
+    setMintingId(id);
+    await new Promise((r) => setTimeout(r, 2200));
+    setCompletedQuests((prev) => [...prev, id]);
+    setMintingId(null);
+    const q = QUESTS.find((q) => q.id === id) ?? null;
+    setToastQuest(q);
+    setTimeout(() => setToastQuest(null), 4500);
   }
 
-  /* ── Render ────────────────────────────────────── */
   return (
-    <>
-      {/* ── Reward Credited Toast ─────────────────── */}
-      <div
-        className={`fixed z-50 left-1/2 -translate-x-1/2 transition-all duration-500 ease-out ${
-          toast?.show ? "top-6 opacity-100" : "-top-24 opacity-0"
-        }`}
-      >
-        {toast && (
-          <div className="flex items-center gap-4 px-6 py-4 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
-            <div className="relative shrink-0">
-              <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
-              <div className="absolute inset-0 w-3 h-3 rounded-full bg-emerald-500 animate-ping opacity-50" />
-            </div>
-            <div>
-              <p className="text-emerald-50 font-bold text-sm">
-                Reward Credited! +₹
-                {toast.reward.toLocaleString("en-IN")}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                New Treasury Balance: ₹
-                {toast.balance.toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                })}
-              </p>
-            </div>
-            <button
-              onClick={() => setToast(null)}
-              className="shrink-0 rounded-lg p-1 text-slate-500 hover:text-emerald-400 hover:bg-slate-800/60 transition-premium"
+    <div className="relative max-w-[1400px] mx-auto space-y-8">
+
+      {/* ── ON-CHAIN MINT TOAST ──────────────────────────── */}
+      <AnimatePresence>
+        {toastQuest && (
+          <motion.div
+            initial={{ opacity: 0, y: -32, scale: 0.95, filter: "blur(6px)" }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -16, scale: 0.95 }}
+            transition={{ duration: 0.5, ease: EXPO_OUT }}
+            className="fixed top-6 left-1/2 z-[200] -translate-x-1/2"
+          >
+            <div
+              className="flex items-center gap-4 px-6 py-4 rounded-2xl backdrop-blur-2xl"
+              style={{
+                background: "rgba(2,6,23,0.90)",
+                border: "1px solid rgba(16,185,129,0.35)",
+                boxShadow:
+                  "0 0 40px rgba(16,185,129,0.18), 0 8px 32px rgba(0,0,0,0.5)",
+              }}
             >
-              <X size={16} />
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="max-w-[1400px] mx-auto space-y-6">
-        {/* ── Header ──────────────────────────────── */}
-        <section className="relative overflow-hidden rounded-2xl gradient-border p-8 animate-fade-in shimmer">
-          <div
-            className="absolute -right-32 -top-32 h-72 w-72 rounded-full bg-yellow-500/[0.04] blur-3xl animate-float"
-          />
-          <div
-            className="absolute -bottom-20 -left-20 h-52 w-52 rounded-full bg-emerald-500/[0.03] blur-3xl animate-float"
-            style={{ animationDelay: "-3s" }}
-          />
-
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="relative h-2 w-2 rounded-full bg-yellow-500">
-                <div className="absolute inset-0 rounded-full bg-yellow-500 animate-ping opacity-75" />
+              <div className="relative shrink-0">
+                <div className="h-3 w-3 rounded-full bg-emerald-400" />
+                <div className="absolute inset-0 h-3 w-3 rounded-full bg-emerald-400 animate-ping opacity-60" />
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-yellow-500">
-                Learn &amp; Earn
-              </span>
+              <div>
+                <p className="text-sm font-black text-emerald-300">
+                  On-chain Mint Confirmed! +{toastQuest.reward}
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  {toastQuest.title} · NFT certificate minted to your wallet
+                </p>
+              </div>
+              <div className="ml-2 flex items-center gap-1 rounded-full px-3 py-1"
+                style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                <Sparkles size={11} className="text-emerald-400" />
+                <span className="text-[11px] font-black text-emerald-400">+{toastQuest.xpReward} XP</span>
+              </div>
             </div>
-            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
-              Academy:{" "}
-              <span className="bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-600 bg-clip-text text-transparent">
-                Kautilya&apos;s Courses
-              </span>
-            </h1>
-            <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-slate-400">
-              Master Web3, value investing, and AI-driven finance through
-              curated micro-courses. Complete each lesson to earn virtual
-              rewards credited directly to your Treasury vault.
-            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            {/* Badges */}
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 rounded-full bg-yellow-500/10 ring-1 ring-yellow-500/20 px-3.5 py-1.5">
-                <div className="relative h-2 w-2 rounded-full bg-yellow-500">
-                  <div className="absolute inset-0 rounded-full bg-yellow-500 animate-ping opacity-75" />
+      {/* ── PLAYER HEADER ────────────────────────────────── */}
+      <motion.section
+        initial={{ opacity: 0, y: 32, filter: "blur(10px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.9, ease: EXPO_OUT }}
+        className="relative overflow-hidden rounded-3xl p-8"
+        style={{
+          background:
+            "linear-gradient(145deg, rgba(15,23,42,0.85), rgba(2,6,23,0.70))",
+          border: "1px solid rgba(212,175,55,0.14)",
+          backdropFilter: "blur(32px)",
+          WebkitBackdropFilter: "blur(32px)",
+          boxShadow:
+            "0 4px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",
+        }}
+      >
+        {/* Ambient glow orbs */}
+        <div
+          className="absolute -top-28 -right-28 h-64 w-64 rounded-full opacity-[0.07] blur-3xl pointer-events-none"
+          style={{ background: "radial-gradient(circle, #d4af37, transparent)" }}
+        />
+        <div
+          className="absolute -bottom-20 -left-20 h-48 w-48 rounded-full opacity-[0.04] blur-3xl pointer-events-none"
+          style={{ background: "radial-gradient(circle, #8b5cf6, transparent)" }}
+        />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent pointer-events-none" />
+
+        <div className="relative z-10">
+          {/* Top row: Level + badge */}
+          <div className="flex flex-wrap items-start justify-between gap-6">
+            <div className="flex items-center gap-5">
+              {/* Avatar orb */}
+              <motion.div
+                animate={{ boxShadow: ["0 0 16px rgba(212,175,55,0.2)", "0 0 32px rgba(212,175,55,0.35)", "0 0 16px rgba(212,175,55,0.2)"] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl"
+                style={{
+                  background: "linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05))",
+                  border: "1px solid rgba(212,175,55,0.25)",
+                }}
+              >
+                <GraduationCap size={30} className="text-amber-400" />
+                <div className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[9px] font-black text-slate-950">
+                  3
                 </div>
-                <GraduationCap size={12} className="text-yellow-400" />
-                <span className="text-[11px] font-bold text-yellow-400 uppercase tracking-wider">
-                  {courses.length} Courses Available
-                </span>
-              </div>
+              </motion.div>
 
-              <div className="flex items-center gap-2 rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/20 px-3.5 py-1.5">
-                <Trophy size={12} className="text-emerald-400" />
-                <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
-                  Earn Up To ₹
-                  {courses
-                    .reduce((s, c) => s + c.reward, 0)
-                    .toLocaleString("en-IN")}
-                </span>
-              </div>
-
-              {!walletAddress && (
-                <div className="flex items-center gap-2 rounded-full bg-rose-500/10 ring-1 ring-rose-500/20 px-3.5 py-1.5">
-                  <span className="text-[11px] font-bold text-rose-400 uppercase tracking-wider">
-                    Connect wallet to earn
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500/60">
+                    Current Rank
                   </span>
                 </div>
-              )}
+                <h1 className="text-2xl font-black tracking-tight text-slate-50">
+                  Level 3:{" "}
+                  <span
+                    className="bg-clip-text text-transparent"
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(135deg, #fbbf24, #f59e0b, #d97706)",
+                    }}
+                  >
+                    Strategist
+                  </span>
+                </h1>
+                <p className="mt-0.5 text-[12px] text-slate-500 font-medium">
+                  Kautilya&apos;s Academy · Ancient Wealth Protocol
+                </p>
+              </div>
+            </div>
+
+            {/* Trophy stat */}
+            <div
+              className="flex items-center gap-3 rounded-2xl px-5 py-3"
+              style={{
+                background: "rgba(212,175,55,0.06)",
+                border: "1px solid rgba(212,175,55,0.15)",
+              }}
+            >
+              <Trophy size={18} className="text-amber-400" />
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
+                  Total Earned
+                </p>
+                <p className="text-lg font-black font-mono text-amber-400">
+                  {totalEarned.toLocaleString()} $ARTHA
+                </p>
+              </div>
             </div>
           </div>
-        </section>
 
-        {/* ── Course Grid ─────────────────────────── */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="glass-card rounded-2xl p-6 animate-pulse"
-              >
-                <div className="h-3 w-20 rounded bg-slate-800 mb-4" />
-                <div className="h-5 w-full rounded bg-slate-800 mb-2" />
-                <div className="h-5 w-3/4 rounded bg-slate-800 mb-6" />
-                <div className="h-3 w-32 rounded bg-slate-800" />
-              </div>
-            ))}
+          {/* XP Progress bar */}
+          <div className="mt-7">
+            <div className="mb-2.5 flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">
+                Experience Points
+              </span>
+              <span className="text-[11px] font-black font-mono text-amber-400/80">
+                {XP_CURRENT} / {XP_MAX} XP
+              </span>
+            </div>
+            <div
+              className="relative h-2.5 rounded-full overflow-hidden"
+              style={{ background: "rgba(15,23,42,0.8)", border: "1px solid rgba(255,255,255,0.04)" }}
+            >
+              <motion.div
+                initial={{ width: "75%" }}
+                animate={{ width: `${xpPct}%` }}
+                transition={{ duration: 1.4, ease: EXPO_OUT }}
+                className="h-full rounded-full"
+                style={{
+                  background:
+                    "linear-gradient(90deg, #92400e, #d97706, #fbbf24, #fde68a)",
+                  boxShadow: "0 0 16px rgba(212,175,55,0.5)",
+                }}
+              />
+              {/* Sheen */}
+              <motion.div
+                className="absolute inset-y-0 w-16"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)",
+                }}
+                animate={{ left: ["-10%", "110%"] }}
+                transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3, ease: "easeInOut" }}
+              />
+            </div>
           </div>
-        ) : courses.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {courses.map((course, i) => {
-              const style = categoryStyle[course.category] ?? fallbackStyle;
-              const icon = categoryIcon[course.category] ?? (
-                <BookOpen size={13} />
-              );
-              const state = cardState[course.id] ?? "idle";
-              const isDone = state === "done";
 
-              return (
-                <div
-                  key={course.id}
-                  className={`group relative glass-card rounded-2xl p-6 card-hover animate-fade-in transition-premium ${
-                    isDone ? "ring-1 ring-emerald-500/30" : ""
-                  }`}
-                  style={{ animationDelay: `${i * 0.1}s` }}
-                >
-                  {/* Completion overlay */}
-                  {isDone && (
-                    <div className="absolute inset-0 rounded-2xl bg-emerald-500/[0.03] pointer-events-none z-0" />
-                  )}
-
-                  <div className="relative z-10">
-                    {/* Top row: category badge + reward */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div
-                        className={`flex items-center gap-1.5 rounded-full ${style.bg} ring-1 ${style.ring} px-3 py-1`}
-                      >
-                        <span className={style.text}>{icon}</span>
-                        <span
-                          className={`text-[11px] font-extrabold uppercase tracking-wider ${style.text}`}
-                        >
-                          {course.category}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1 rounded-full bg-yellow-500/10 ring-1 ring-yellow-500/20 px-3 py-1">
-                        <Sparkles size={11} className="text-yellow-400" />
-                        <span className="text-[12px] font-extrabold text-yellow-400 font-mono">
-                          +₹{course.reward.toLocaleString("en-IN")}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Title */}
-                    <h3 className="text-[16px] font-bold leading-snug text-slate-200 group-hover:text-slate-50 transition-smooth mb-2">
-                      {course.title}
-                    </h3>
-
-                    {/* Description */}
-                    <p className="text-[13px] leading-relaxed text-slate-500 mb-6 line-clamp-3">
-                      {course.description}
-                    </p>
-
-                    {/* CTA Button */}
-                    {isDone ? (
-                      <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20 px-4 py-3">
-                        <CheckCircle2
-                          size={18}
-                          className="text-emerald-400"
-                        />
-                        <span className="text-[13px] font-bold text-emerald-400">
-                          Lesson Completed!
-                        </span>
-                        <span className="ml-auto text-[11px] font-mono font-bold text-emerald-500">
-                          +₹{course.reward.toLocaleString("en-IN")} credited
-                        </span>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleComplete(course)}
-                        disabled={
-                          !walletAddress || state === "completing"
-                        }
-                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-yellow-600 px-5 py-3 font-bold text-[13px] text-white transition-premium hover:bg-yellow-500 hover:shadow-xl hover:shadow-yellow-500/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {state === "completing" ? (
-                          <>
-                            <Loader2
-                              size={16}
-                              className="animate-spin"
-                            />
-                            Completing…
-                          </>
-                        ) : (
-                          <>
-                            <BookOpen size={16} />
-                            Start Learning
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="glass-card rounded-2xl p-12 text-center">
-            <GraduationCap
-              size={40}
-              className="mx-auto text-slate-700 mb-4"
-              strokeWidth={1.2}
-            />
-            <p className="text-sm font-medium text-slate-500">
-              No courses available. Check the backend connection.
-            </p>
-          </div>
-        )}
-
-        {/* ── Summary Bar ─────────────────────────── */}
-        {courses.length > 0 && (
-          <div className="glass-card rounded-2xl p-5 animate-fade-in delay-500">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3">
-                <GraduationCap size={16} className="text-yellow-500" />
-                <span className="text-[12px] font-bold uppercase tracking-[0.15em] text-slate-400">
-                  Academy Progress
+          {/* Stats row */}
+          <div className="mt-5 flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-2">
+              <Pickaxe size={13} className="text-amber-500/50" />
+              <span className="text-[12px] font-bold text-slate-400">
+                Quests Completed:{" "}
+                <span className="text-amber-400 font-black">
+                  {completedQuests.length}/{QUESTS.length}
                 </span>
-              </div>
-              <div className="flex items-center gap-4">
-                {Object.keys(categoryStyle).map((cat) => {
-                  const count = courses.filter(
-                    (c) => c.category === cat
-                  ).length;
-                  const done = courses.filter(
-                    (c) =>
-                      c.category === cat && cardState[c.id] === "done"
-                  ).length;
-                  const s = categoryStyle[cat];
-                  return (
-                    <div key={cat} className="flex items-center gap-1.5">
+              </span>
+            </div>
+            <div className="h-3 w-px bg-slate-800" />
+            <div className="flex items-center gap-2">
+              <Coins size={13} className="text-amber-500/50" />
+              <span className="text-[12px] font-bold text-slate-400">
+                Total Earned:{" "}
+                <span className="text-amber-400 font-black">
+                  {totalEarned.toLocaleString()} $ARTHA
+                </span>
+              </span>
+            </div>
+            <div className="h-3 w-px bg-slate-800" />
+            <div className="flex items-center gap-2">
+              <Star size={13} className="text-amber-500/50" />
+              <span className="text-[12px] font-bold text-slate-400">
+                XP Gained this session:{" "}
+                <span className="text-amber-400 font-black">+{xpEarned}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ── SECTION LABEL ────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, x: -16 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.7, ease: EXPO_OUT, delay: 0.15 }}
+        className="flex items-center gap-4"
+      >
+        <div className="relative h-2 w-2 shrink-0">
+          <div className="absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-40" />
+          <div className="h-2 w-2 rounded-full bg-amber-400" />
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-400/70">
+          Quest Board · {QUESTS.length - completedQuests.length} Active
+        </span>
+        <div className="h-px flex-1 bg-gradient-to-r from-amber-500/15 to-transparent" />
+        <BookOpen size={13} className="text-slate-700" />
+      </motion.div>
+
+      {/* ── QUEST GRID ───────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {QUESTS.map((quest, idx) => {
+          const isCompleted = completedQuests.includes(quest.id);
+          const isMinting = mintingId === quest.id;
+          const isLocked = mintingId !== null && mintingId !== quest.id;
+          const diff = DIFFICULTY_STYLE[quest.difficulty];
+
+          return (
+            <motion.div
+              key={quest.id}
+              initial={{ opacity: 0, y: 40, filter: "blur(8px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{
+                duration: 0.85,
+                ease: EXPO_OUT,
+                delay: 0.1 + idx * 0.1,
+              }}
+              whileHover={!isCompleted && !isMinting ? { y: -8, scale: 1.012 } : {}}
+              className="group relative flex flex-col rounded-3xl overflow-hidden"
+              style={{
+                background:
+                  "linear-gradient(160deg, rgba(15,23,42,0.80), rgba(2,6,23,0.65))",
+                border: isCompleted
+                  ? "1px solid rgba(16,185,129,0.30)"
+                  : `1px solid rgba(30,41,59,0.80)`,
+                backdropFilter: "blur(24px)",
+                WebkitBackdropFilter: "blur(24px)",
+                boxShadow: isCompleted
+                  ? "0 4px 32px rgba(16,185,129,0.08), inset 0 1px 0 rgba(255,255,255,0.03)"
+                  : "0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03)",
+                transition: "box-shadow 0.5s ease, border-color 0.5s ease",
+              }}
+            >
+              {/* Hover glow overlay */}
+              {!isCompleted && (
+                <div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none rounded-3xl"
+                  style={{
+                    boxShadow: `0 0 60px ${quest.categoryColor.glow}`,
+                    transition: "opacity 0.6s ease",
+                  }}
+                />
+              )}
+
+              {/* Completion overlay tint */}
+              {isCompleted && (
+                <div
+                  className="absolute inset-0 pointer-events-none rounded-3xl"
+                  style={{
+                    background:
+                      "linear-gradient(145deg, rgba(16,185,129,0.04), transparent)",
+                  }}
+                />
+              )}
+
+              {/* Top accent bar */}
+              <div
+                className="absolute inset-x-0 top-0 h-px"
+                style={{
+                  background: isCompleted
+                    ? "linear-gradient(90deg, transparent, rgba(16,185,129,0.4), transparent)"
+                    : `linear-gradient(90deg, transparent, ${quest.categoryColor.border}, transparent)`,
+                  opacity: isCompleted ? 1 : 0.5,
+                  transition: "opacity 0.5s ease",
+                }}
+              />
+
+              {/* ── Card body */}
+              <div className="relative z-10 flex flex-col h-full p-7">
+                {/* Top row */}
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    {/* Category tag */}
+                    <div
+                      className="flex items-center gap-2 rounded-full px-3.5 py-1.5 shrink-0"
+                      style={{
+                        background: quest.categoryColor.bg,
+                        border: `1px solid ${quest.categoryColor.border}`,
+                      }}
+                    >
                       <div
-                        className={`h-2 w-2 rounded-full ${s.dot}`}
+                        className="h-1.5 w-1.5 rounded-full"
+                        style={{ background: quest.categoryColor.dot }}
                       />
                       <span
-                        className={`text-[12px] font-bold ${s.text}`}
+                        className="text-[10px] font-black uppercase tracking-[0.2em]"
+                        style={{ color: quest.categoryColor.text }}
                       >
-                        {done}/{count}
-                      </span>
-                      <span className="text-[11px] text-slate-600">
-                        {cat}
+                        {quest.category}
                       </span>
                     </div>
-                  );
-                })}
+
+                    {/* Difficulty */}
+                    <div
+                      className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
+                      style={{
+                        background: diff.bg,
+                        border: `1px solid ${diff.border}`,
+                      }}
+                    >
+                      <span
+                        className="text-[10px] font-black uppercase tracking-[0.15em]"
+                        style={{ color: diff.color }}
+                      >
+                        {quest.difficulty}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Reward chip */}
+                  <div
+                    className="flex items-center gap-1.5 rounded-full px-4 py-1.5 shrink-0"
+                    style={{
+                      background: "rgba(212,175,55,0.08)",
+                      border: "1px solid rgba(212,175,55,0.22)",
+                    }}
+                  >
+                    <Coins size={12} className="text-amber-400" />
+                    <span className="text-[12px] font-black font-mono text-amber-400">
+                      {quest.reward}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Icon + Title */}
+                <div className="flex items-start gap-4 mb-4">
+                  <motion.div
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 ring-white/[0.06]"
+                    style={{
+                      background: `linear-gradient(135deg, ${quest.categoryColor.bg}, rgba(2,6,23,0.5))`,
+                      color: quest.categoryColor.text,
+                      boxShadow: `0 4px 16px ${quest.categoryColor.glow}`,
+                    }}
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    transition={SPRING_SNAP}
+                  >
+                    {quest.icon}
+                  </motion.div>
+
+                  <div>
+                    <h3 className="text-[17px] font-black tracking-tight text-slate-100 group-hover:text-white transition-colors duration-400 leading-snug">
+                      {quest.title}
+                    </h3>
+                    <p className="mt-0.5 text-[11px] font-bold text-slate-600">
+                      {quest.modules} modules · +{quest.xpReward} XP
+                    </p>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <p className="text-[13px] leading-relaxed text-slate-500 group-hover:text-slate-400 transition-colors duration-400 flex-1 mb-7">
+                  {quest.description}
+                </p>
+
+                {/* ── CTA BUTTON */}
+                <div className="mt-auto">
+                  <AnimatePresence mode="wait">
+                    {isCompleted ? (
+                      <motion.div
+                        key="done"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.4, ease: EXPO_OUT }}
+                        className="flex w-full items-center gap-3 rounded-2xl px-5 py-3.5"
+                        style={{
+                          background: "rgba(16,185,129,0.08)",
+                          border: "1px solid rgba(16,185,129,0.25)",
+                        }}
+                      >
+                        <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                        <span className="text-[13px] font-black text-emerald-400">
+                          Reward Claimed
+                        </span>
+                        <span className="ml-auto text-[11px] font-black font-mono text-emerald-500/70">
+                          +{quest.reward}
+                        </span>
+                      </motion.div>
+                    ) : isMinting ? (
+                      <motion.div
+                        key="minting"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex w-full items-center justify-center gap-3 rounded-2xl px-5 py-3.5"
+                        style={{
+                          background: "rgba(212,175,55,0.08)",
+                          border: "1px solid rgba(212,175,55,0.25)",
+                        }}
+                      >
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        >
+                          <Pickaxe size={16} className="text-amber-400" />
+                        </motion.div>
+                        <motion.span
+                          className="text-[13px] font-black text-amber-400"
+                          animate={{ opacity: [1, 0.5, 1] }}
+                          transition={{ duration: 1.2, repeat: Infinity }}
+                        >
+                          Minting on-chain…
+                        </motion.span>
+                      </motion.div>
+                    ) : (
+                      <motion.button
+                        key="claim"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => handleClaimReward(quest.id)}
+                        disabled={isLocked}
+                        whileHover={!isLocked ? { scale: 1.03 } : {}}
+                        whileTap={!isLocked ? { scale: 0.97 } : {}}
+                        transition={SPRING_SNAP}
+                        className="group/btn relative flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-2xl px-5 py-3.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{
+                          background: isLocked
+                            ? "rgba(30,41,59,0.6)"
+                            : "linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.04))",
+                          border: isLocked
+                            ? "1px solid rgba(30,41,59,0.8)"
+                            : "1px solid rgba(212,175,55,0.28)",
+                          boxShadow: isLocked
+                            ? "none"
+                            : "0 4px 20px rgba(0,0,0,0.25)",
+                        }}
+                      >
+                        {/* Shine sweep on hover */}
+                        {!isLocked && (
+                          <motion.div
+                            className="absolute inset-0 pointer-events-none"
+                            style={{
+                              background:
+                                "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.07) 50%, transparent 65%)",
+                              backgroundSize: "200% 100%",
+                            }}
+                            animate={{ backgroundPosition: ["-100% 0", "200% 0"] }}
+                            transition={{
+                              duration: 2,
+                              repeat: Infinity,
+                              repeatDelay: 4,
+                              ease: "easeInOut",
+                            }}
+                          />
+                        )}
+                        {isLocked ? (
+                          <Lock size={15} className="text-slate-600" />
+                        ) : (
+                          <Zap size={15} className="text-amber-400" />
+                        )}
+                        <span
+                          className="text-[13px] font-black uppercase tracking-[0.1em]"
+                          style={{ color: isLocked ? "#475569" : "#fbbf24" }}
+                        >
+                          {isLocked ? "Another Quest Active" : "Complete Quest & Claim"}
+                        </span>
+                        {!isLocked && (
+                          <ArrowUpRight
+                            size={14}
+                            className="text-amber-500/60 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5"
+                          />
+                        )}
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* ── COMPLETION BANNER ────────────────────────────── */}
+      <AnimatePresence>
+        {completedQuests.length === QUESTS.length && (
+          <motion.div
+            initial={{ opacity: 0, y: 32, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ duration: 0.8, ease: EXPO_OUT }}
+            className="relative overflow-hidden rounded-3xl p-10 text-center"
+            style={{
+              background:
+                "linear-gradient(160deg, rgba(212,175,55,0.08), rgba(2,6,23,0.80))",
+              border: "1px solid rgba(212,175,55,0.22)",
+              backdropFilter: "blur(32px)",
+              boxShadow:
+                "0 0 80px rgba(212,175,55,0.08), 0 8px 40px rgba(0,0,0,0.4)",
+            }}
+          >
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+            <motion.div
+              animate={{ scale: [1, 1.1, 1], rotate: [0, 6, -6, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="mb-4 inline-block"
+            >
+              <Trophy size={48} className="text-amber-400 mx-auto" />
+            </motion.div>
+            <h2 className="text-3xl font-black tracking-tight text-slate-50">
+              Quest Board{" "}
+              <span
+                className="bg-clip-text text-transparent"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(135deg, #fbbf24, #f59e0b, #d97706)",
+                }}
+              >
+                Conquered
+              </span>
+            </h2>
+            <p className="mt-3 text-sm text-slate-500 max-w-md mx-auto">
+              All quests complete. {(QUESTS.length * 500).toLocaleString()} $ARTHA
+              earned and {QUESTS.length} NFT certificates minted to your wallet. Kautilya
+              would be proud.
+            </p>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <div
+                className="flex items-center gap-2 rounded-full px-5 py-2.5"
+                style={{
+                  background: "rgba(212,175,55,0.08)",
+                  border: "1px solid rgba(212,175,55,0.2)",
+                }}
+              >
+                <Shield size={14} className="text-amber-400" />
+                <span className="text-[12px] font-black text-amber-400 uppercase tracking-[0.2em]">
+                  Rank Unlocked: Grandmaster
+                </span>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
-      </div>
-    </>
+      </AnimatePresence>
+    </div>
   );
 }
