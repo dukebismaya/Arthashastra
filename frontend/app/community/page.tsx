@@ -14,7 +14,18 @@ import {
   Zap,
   Shield,
   HelpCircle,
+  Lock,
 } from "lucide-react";
+import { useUserData } from "@/hooks/useUserData";
+import { auth, db } from "@/lib/firebase";
+import {
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+} from "firebase/firestore";
 
 /* ═══════════════════════════════════════════════════════════
    Community — The Trading Floor
@@ -75,73 +86,18 @@ function initials(name: string) {
   return name.slice(0, 2).toUpperCase();
 }
 
-/* ── Pre-seeded Messages ──────────────────────────────── */
+/* ── Time-ago helper ──────────────────────────────────── */
 
-const initialMessages: ChatMessage[] = [
-  {
-    id: "1",
-    author: "0xc8...44d9",
-    avatar: "0X",
-    avatarColor: pickColor("0xc8"),
-    text: "Just ran the Chanakya AI on $NVDA. Confidence is 92% bullish. Anyone else seeing this accumulation?",
-    sentiment: "bullish",
-    time: "2m ago",
-  },
-  {
-    id: "2",
-    author: "Kautilya_Whale",
-    avatar: "KW",
-    avatarColor: pickColor("Kautilya_Whale"),
-    text: "Careful, MACD is showing bearish divergence on the hourly chart. I'm hedging with puts.",
-    sentiment: "bearish",
-    time: "5m ago",
-  },
-  {
-    id: "3",
-    author: "AlphaSeeker",
-    avatar: "AS",
-    avatarColor: pickColor("AlphaSeeker"),
-    text: "Did anyone catch that FinBERT sentiment drop on the latest Fed news? Market might overreact.",
-    sentiment: "neutral",
-    time: "12m ago",
-  },
-  {
-    id: "4",
-    author: "NewTrader99",
-    avatar: "NT",
-    avatarColor: pickColor("NewTrader99"),
-    text: "Just claimed my 500 $ARTHA from the Academy Web3 module! LFG 🚀",
-    sentiment: "bullish",
-    time: "15m ago",
-  },
-  {
-    id: "5",
-    author: "DeFi_Sage",
-    avatar: "DS",
-    avatarColor: pickColor("DeFi_Sage"),
-    text: "RSI on RELIANCE just broke below 30 on the 4H. Classic oversold bounce incoming?",
-    sentiment: "bullish",
-    time: "18m ago",
-  },
-  {
-    id: "6",
-    author: "BearishBaba",
-    avatar: "BB",
-    avatarColor: pickColor("BearishBaba"),
-    text: "Nifty looks weak at resistance. If 24,800 doesn't hold today, I'm shorting into the close.",
-    sentiment: "bearish",
-    time: "22m ago",
-  },
-  {
-    id: "7",
-    author: "QuantQueen",
-    avatar: "QQ",
-    avatarColor: pickColor("QuantQueen"),
-    text: "My algo flagged unusual options volume on INFY. IV crush might be a play post-earnings. Thoughts?",
-    sentiment: "neutral",
-    time: "28m ago",
-  },
-];
+function timeAgo(date: Date | null): string {
+  if (!date) return "just now";
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const mins = Math.floor(seconds / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 /* ── Sentiment Helpers ────────────────────────────────── */
 
@@ -156,12 +112,36 @@ const SENTIMENT_BADGE: Record<Sentiment, { icon: React.ElementType; label: strin
    ══════════════════════════════════════════════════════════ */
 
 export default function CommunityPage() {
+  const { isAuthenticated } = useUserData();
   const [activeChannel, setActiveChannel] = useState("global-alpha");
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [activeSentiment, setActiveSentiment] = useState<Sentiment>("neutral");
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  /* ── Real-time Firestore listener ───────────────────── */
+  useEffect(() => {
+    const q = query(collection(db, "messages"), orderBy("createdAt", "asc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const live: ChatMessage[] = snapshot.docs.map((doc) => {
+        const d = doc.data();
+        const sender: string = d.sender ?? "Anonymous";
+        const ts = d.createdAt?.toDate?.() ?? null;
+        return {
+          id: doc.id,
+          author: sender,
+          avatar: initials(sender),
+          avatarColor: pickColor(sender),
+          text: d.text ?? "",
+          sentiment: (d.sentiment as Sentiment) ?? "neutral",
+          time: timeAgo(ts),
+        };
+      });
+      setMessages(live);
+    });
+    return () => unsubscribe();
+  }, []);
 
   /* ── Auto-scroll on new message ─────────────────────── */
   useEffect(() => {
@@ -169,22 +149,22 @@ export default function CommunityPage() {
   }, [messages]);
 
   /* ── Send handler ───────────────────────────────────── */
-  function handleSend(e: React.FormEvent) {
+  async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = newMessage.trim();
     if (!trimmed) return;
 
-    const msg: ChatMessage = {
-      id: Date.now().toString(),
-      author: "You",
-      avatar: "YO",
-      avatarColor: "from-amber-400 to-yellow-500",
-      text: trimmed,
-      sentiment: activeSentiment,
-      time: "Just now",
-    };
+    const currentUser = auth.currentUser
+      ? auth.currentUser.email ?? "Anonymous Whale"
+      : "Anonymous Whale";
 
-    setMessages((prev) => [...prev, msg]);
+    await addDoc(collection(db, "messages"), {
+      text: trimmed,
+      sender: currentUser,
+      sentiment: activeSentiment,
+      createdAt: serverTimestamp(),
+    });
+
     setNewMessage("");
     setActiveSentiment("neutral");
     inputRef.current?.focus();
@@ -195,6 +175,27 @@ export default function CommunityPage() {
 
   return (
     <div className="flex h-[calc(100vh-56px)] max-w-[1400px] mx-auto gap-0 animate-fade-in">
+      {/* ── Auth Gate ───────────────────────────── */}
+      {!isAuthenticated ? (
+        <div className="flex flex-1 flex-col items-center justify-center animate-fade-in">
+          <div className="glass-card rounded-2xl p-10 text-center max-w-md">
+            <div className="mb-4 mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 ring-1 ring-amber-500/20">
+              <Lock size={28} className="text-amber-500" />
+            </div>
+            <h2 className="text-2xl font-extrabold text-slate-100 mb-2">Trading Floor Locked</h2>
+            <p className="text-[13px] text-slate-500 leading-relaxed mb-6">
+              Sign in to join the community, share alpha, and chat with fellow traders on the Trading Floor.
+            </p>
+            <button
+              onClick={() => window.dispatchEvent(new Event("arthashastra:openAuth"))}
+              className="rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 px-8 py-3 text-[13px] font-bold text-slate-950 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all duration-200 hover:scale-105 active:scale-95"
+            >
+              Sign In to Join
+            </button>
+          </div>
+        </div>
+      ) : (
+      <>
       {/* ════════════════════════════════════════════════════
           LEFT — Channel Sidebar
          ════════════════════════════════════════════════════ */}
@@ -312,7 +313,7 @@ export default function CommunityPage() {
                   key={msg.id}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, ease: EXPO_OUT, delay: idx < initialMessages.length ? idx * 0.04 : 0 }}
+                  transition={{ duration: 0.35, ease: EXPO_OUT, delay: idx < 10 ? idx * 0.04 : 0 }}
                   className="group flex items-start gap-3 rounded-xl px-3 py-3 -mx-1 hover:bg-slate-800/20 transition-colors duration-200"
                 >
                   {/* Avatar */}
@@ -406,6 +407,8 @@ export default function CommunityPage() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -31,6 +31,13 @@ export default function Navbar() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+    // ── Listen for openAuth events from child pages ──
+    useEffect(() => {
+        const openAuth = () => setIsAuthModalOpen(true);
+        window.addEventListener("arthashastra:openAuth", openAuth);
+        return () => window.removeEventListener("arthashastra:openAuth", openAuth);
+    }, []);
+
     // ── Clock ──
     useEffect(() => {
         const tick = () => {

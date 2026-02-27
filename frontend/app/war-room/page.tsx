@@ -11,6 +11,7 @@ import {
   Crosshair,
   Loader2,
   CheckCircle2,
+  Lock,
 } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
 import PredictionHistoryWidget, { savePrediction } from "@/components/dashboard/PredictionHistoryWidget";
@@ -27,7 +28,7 @@ interface AnalysisResult {
 }
 
 export default function WarRoomPage() {
-  const { backendId } = useUserData();
+  const { backendId, isAuthenticated } = useUserData();
   const [wager, setWager] = useState("");
   const [isPredicting, setIsPredicting] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
@@ -138,7 +139,24 @@ export default function WarRoomPage() {
           </div>
 
           {/* Wager + Action Buttons */}
-          <div className="glass-card rounded-2xl p-6 card-hover animate-fade-in delay-200">
+          <div className="glass-card rounded-2xl p-6 card-hover animate-fade-in delay-200 relative">
+            {!isAuthenticated && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl bg-slate-950/80 backdrop-blur-sm">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 ring-1 ring-amber-500/20">
+                  <Lock size={20} className="text-amber-500" />
+                </div>
+                <p className="text-sm font-bold text-slate-300 mb-1">Sign in to Predict</p>
+                <p className="text-[11px] text-slate-600 mb-3 max-w-[220px] text-center">
+                  Connect your account to place wagers and access Chanakya AI analysis.
+                </p>
+                <button
+                  onClick={() => window.dispatchEvent(new Event("arthashastra:openAuth"))}
+                  className="rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 px-5 py-2 text-[12px] font-bold text-slate-950 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all duration-200 hover:scale-105 active:scale-95"
+                >
+                  Sign In
+                </button>
+              </div>
+            )}
             <h2 className="flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-5">
               <Crosshair size={15} className="text-yellow-500" />
               Place Your Prediction

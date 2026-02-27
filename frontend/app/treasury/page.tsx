@@ -12,6 +12,7 @@ import {
   Receipt,
   Landmark,
   Sparkles,
+  Lock,
 } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
 import PortfolioInsightsWidget from "@/components/dashboard/PortfolioInsightsWidget";
@@ -108,6 +109,29 @@ export default function TreasuryPage() {
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-6">
+      {/* ── Auth Gate ───────────────────────────── */}
+      {!isAuthenticated && (
+        <div className="flex flex-col items-center justify-center py-24 animate-fade-in">
+          <div className="glass-card rounded-2xl p-10 text-center max-w-md">
+            <div className="mb-4 mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 ring-1 ring-amber-500/20">
+              <Lock size={28} className="text-amber-500" />
+            </div>
+            <h2 className="text-2xl font-extrabold text-slate-100 mb-2">Treasury Locked</h2>
+            <p className="text-[13px] text-slate-500 leading-relaxed mb-6">
+              Sign in with Firebase or connect your Web3 wallet to access your portfolio, deposit funds, and view your transaction ledger.
+            </p>
+            <button
+              onClick={() => window.dispatchEvent(new Event("arthashastra:openAuth"))}
+              className="rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 px-8 py-3 text-[13px] font-bold text-slate-950 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all duration-200 hover:scale-105 active:scale-95"
+            >
+              Sign In to Access Treasury
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isAuthenticated && (
+      <>
       {/* ── Header ──────────────────────────────── */}
       <section className="relative overflow-hidden rounded-2xl gradient-border p-8 animate-fade-in shimmer">
         <div className="absolute -right-32 -top-32 h-72 w-72 rounded-full bg-yellow-500/[0.04] blur-3xl animate-float" />
@@ -308,7 +332,7 @@ export default function TreasuryPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <PortfolioInsightsWidget userId={backendId} />
         <PredictionHistoryWidget userId={backendId} />
-      </div>
-    </div>
+      </div>      </>
+      )}    </div>
   );
 }
