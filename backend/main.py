@@ -22,7 +22,9 @@ app = FastAPI(
 # --------------- CORS Middleware ---------------
 origins = [
     "http://localhost:3000",
+    os.getenv("FRONTEND_URL", ""),  # e.g. https://arthashastra.vercel.app
 ]
+origins = [o for o in origins if o]  # remove blanks
 
 app.add_middleware(
     CORSMiddleware,
