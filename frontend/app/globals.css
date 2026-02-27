@@ -28,7 +28,6 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
 }
 
 ::selection {
@@ -441,4 +440,125 @@ body {
 .sparkline-animate {
   stroke-dasharray: 200;
   animation: draw-line 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ═══════════════════════════════════════════════════
+   PREMIUM ENHANCEMENTS — V2.0
+   ═══════════════════════════════════════════════════ */
+
+/* ── Perspective for 3D book ────────────────────── */
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+/* ── Glass morphism ultra ───────────────────────── */
+.glass-ultra {
+  background: rgba(2, 6, 23, 0.6);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgba(30, 41, 59, 0.3);
+}
+
+/* ── Glow pulse for interactive elements ────────── */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.1), 0 0 24px rgba(212, 175, 55, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(212, 175, 55, 0.2), 0 0 48px rgba(212, 175, 55, 0.1);
+  }
+}
+
+.glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+/* ── Smooth line reveal ─────────────────────────── */
+@keyframes line-reveal {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.line-reveal {
+  animation: line-reveal 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ── Text gradient animation ────────────────────── */
+@keyframes text-shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.text-shimmer {
+  background-size: 200% auto;
+  animation: text-shimmer 4s linear infinite;
+}
+
+/* ── Entrance reveal from bottom ────────────────── */
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.reveal-up {
+  animation: reveal-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+/* ── Magnetic hover effect on cards ─────────────── */
+.card-magnetic {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s ease;
+}
+
+.card-magnetic:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(51, 65, 85, 0.2),
+    0 0 32px rgba(212, 175, 55, 0.03);
+}
+
+/* ── Breathing dot indicator ────────────────────── */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 1;
+  }
+}
+
+.breathe {
+  animation: breathe 2.5s ease-in-out infinite;
+}
+
+/* ── Subtle parallax scroll helper ──────────────── */
+.parallax-slow {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* ── Focus ring for accessibility ───────────────── */
+.focus-ring:focus-visible {
+  outline: 2px solid rgba(212, 175, 55, 0.5);
+  outline-offset: 2px;
+  border-radius: 8px;
 }
