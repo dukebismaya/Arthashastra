@@ -1,12 +1,59 @@
 "use client";
 
-import { Search, Bell, User, Command, Globe, Wallet } from "lucide-react";
+import Link from "next/link";
+import { Search, Bell, User, Command, Globe, Wallet, Coins } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export default function Navbar() {
     const [searchFocused, setSearchFocused] = useState(false);
     const [walletAddress, setWalletAddress] = useState<string | null>(null);
+    const [balance, setBalance] = useState<number>(0);
     const [currentTime, setCurrentTime] = useState("");
+    const [notifications, setNotifications] = useState<string[]>([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+
+    // Look for existing wallet connection on mount
+    useEffect(() => {
+        const checkConnection = async () => {
+            if (typeof window !== "undefined" && window.ethereum) {
+                try {
+                    const accounts = (await window.ethereum.request({ method: "eth_accounts" })) as string[];
+                    if (accounts.length > 0) {
+                        setWalletAddress(accounts[0]);
+                    }
+                } catch (err) {
+                    console.error("Error checking wallet connection:", err);
+                }
+            }
+        };
+        checkConnection();
+    }, []);
+
+    // Fetch balance whenever walletAddress changes or "balanceUpdated" event fires
+    useEffect(() => {
+        if (!walletAddress) return;
+
+        const fetchBalance = async () => {
+            try {
+                const res = await fetch(`http://localhost:8000/api/v1/user/${walletAddress}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setBalance(data.portfolio_balance);
+                }
+            } catch (error) {
+                console.error("Failed to fetch balance:", error);
+            }
+        };
+
+        fetchBalance();
+
+        const handleBalanceUpdate = () => fetchBalance();
+        window.addEventListener("balanceUpdated", handleBalanceUpdate);
+
+        return () => {
+            window.removeEventListener("balanceUpdated", handleBalanceUpdate);
+        };
+    }, [walletAddress]);
 
     useEffect(() => {
         const tick = () => {
@@ -26,19 +73,33 @@ export default function Navbar() {
     }, []);
 
     async function connectWallet() {
-        if (typeof window !== "undefined" && (window as any).ethereum) {
+        if (typeof window !== "undefined" && window.ethereum) {
             try {
-                const accounts: string[] = await (window as any).ethereum.request({
+                const accounts = (await window.ethereum.request({
                     method: "eth_requestAccounts",
-                });
+                })) as string[];
                 setWalletAddress(accounts[0]);
-            } catch {
-                /* wallet connection rejected */
+                // Trigger event so balance is fetched
+                window.dispatchEvent(new Event("balanceUpdated"));
+            } catch (err) {
+                console.error("Wallet connection failed:", err);
             }
         } else {
             alert("MetaMask not detected. Please install the MetaMask extension to connect your wallet.");
         }
     }
+
+    // Simulating incoming notifications
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setNotifications(prev => ["Welcome to Arthashastra! Create your first prediction.", ...prev]);
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, []);
+
+    const toggleNotifications = () => {
+        setShowNotifications(!showNotifications);
+    };
 
     return (
         <header className="sticky top-0 z-30 flex h-[56px] items-center justify-between gap-6 border-b border-slate-800/40 px-6 bg-slate-950/80 backdrop-blur-2xl">
@@ -94,17 +155,50 @@ export default function Navbar() {
                 </div>
 
                 {/* Notifications */}
-                <button className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-800/40 hover:text-slate-300 transition-premium">
-                    <Bell size={15} strokeWidth={1.8} />
-                    <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-500 ring-2 ring-slate-950">
-                        <span className="absolute inset-0 rounded-full bg-amber-500 animate-ping opacity-75" />
-                    </span>
-                </button>
+                <div className="relative">
+                    <button 
+                        onClick={toggleNotifications}
+                        className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-800/40 hover:text-slate-300 transition-premium"
+                    >
+                        <Bell size={15} strokeWidth={1.8} />
+                        {notifications.length > 0 && (
+                            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-500 ring-2 ring-slate-950">
+                                <span className="absolute inset-0 rounded-full bg-amber-500 animate-ping opacity-75" />
+                            </span>
+                        )}
+                    </button>
+                    {showNotifications && (
+                        <div className="absolute right-0 top-12 w-80 bg-slate-900 border border-slate-800 rounded-lg shadow-xl z-50 overflow-hidden">
+                            <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/50 flex justify-between items-center">
+                                <h3 className="text-sm font-bold text-slate-200">Notifications</h3>
+                                <button 
+                                    onClick={() => setNotifications([])}
+                                    className="text-[10px] text-amber-500 hover:text-amber-400 font-medium"
+                                >
+                                    Clear All
+                                </button>
+                            </div>
+                            <div className="max-h-64 overflow-y-auto">
+                                {notifications.length > 0 ? (
+                                    notifications.map((note, index) => (
+                                        <div key={index} className="px-4 py-3 border-b border-slate-800 last:border-0 hover:bg-slate-800/20 transition-colors">
+                                            <p className="text-xs text-slate-300 leading-relaxed">{note}</p>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="px-4 py-8 text-center text-slate-500 text-xs">
+                                        No new notifications.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* Profile */}
-                <button className="rounded-lg p-2 text-slate-500 hover:bg-slate-800/40 hover:text-slate-300 transition-premium">
+                <Link href="/profile" className="rounded-lg p-2 text-slate-500 hover:bg-slate-800/40 hover:text-slate-300 transition-premium">
                     <User size={15} strokeWidth={1.8} />
-                </button>
+                </Link>
 
                 {/* Divider */}
                 <div className="mx-1 h-6 w-px bg-gradient-to-b from-transparent via-slate-800 to-transparent" />
@@ -118,6 +212,16 @@ export default function Navbar() {
                             : "bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-500/30 text-amber-400 hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10"
                     }`}
                 >
+                    {/* Balance Display */}
+                    {walletAddress && (
+                        <div className="hidden sm:flex items-center gap-2 mr-2 pr-3 border-r border-amber-500/20">
+                            <Coins size={14} className="text-amber-400" />
+                            <span className="text-[12px] font-bold text-slate-200">
+                                ₹{balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                            </span>
+                        </div>
+                    )}
+                    
                     <Wallet size={13} className={walletAddress ? "text-amber-500" : "text-amber-500/70 group-hover:text-amber-400"} />
                     {walletAddress
                         ? `${walletAddress.slice(0, 6)}…${walletAddress.slice(-4)}`

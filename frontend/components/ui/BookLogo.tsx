@@ -58,8 +58,8 @@ export default function BookLogo({ size = 48, className = "" }: BookLogoProps) {
         >
           <div className="h-full w-full flex items-center justify-center">
             <div className="w-[60%] space-y-[3px]">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-[1.5px] rounded-full bg-amber-300/50" style={{ width: `${70 + Math.random() * 30}%` }} />
+              {[85, 92, 78, 95, 82].map((width, i) => (
+                <div key={i} className="h-[1.5px] rounded-full bg-amber-300/50" style={{ width: `${width}%` }} />
               ))}
             </div>
           </div>
@@ -71,8 +71,8 @@ export default function BookLogo({ size = 48, className = "" }: BookLogoProps) {
         >
           <div className="h-full w-full flex items-center justify-center">
             <div className="w-[60%] space-y-[3px]">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-[1.5px] rounded-full bg-amber-300/40" style={{ width: `${60 + Math.random() * 35}%` }} />
+              {[70, 85, 60, 90].map((width, i) => (
+                <div key={i} className="h-[1.5px] rounded-full bg-amber-300/40" style={{ width: `${width}%` }} />
               ))}
             </div>
           </div>
@@ -99,8 +99,8 @@ export default function BookLogo({ size = 48, className = "" }: BookLogoProps) {
         >
           <div className="h-full w-full flex items-center justify-center">
             <div className="w-[60%] space-y-[3px]">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-[1.5px] rounded-full bg-amber-300/50" style={{ width: `${65 + Math.random() * 30}%` }} />
+              {[70, 85, 90, 65, 80].map((width, i) => (
+                <div key={i} className="h-[1.5px] rounded-full bg-amber-300/50" style={{ width: `${width}%` }} />
               ))}
             </div>
           </div>
@@ -111,8 +111,8 @@ export default function BookLogo({ size = 48, className = "" }: BookLogoProps) {
         >
           <div className="h-full w-full flex items-center justify-center">
             <div className="w-[60%] space-y-[3px]">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-[1.5px] rounded-full bg-amber-300/40" style={{ width: `${60 + Math.random() * 35}%` }} />
+              {[70, 85, 60, 90].map((width, i) => (
+                <div key={i} className="h-[1.5px] rounded-full bg-amber-300/40" style={{ width: `${width}%` }} />
               ))}
             </div>
           </div>

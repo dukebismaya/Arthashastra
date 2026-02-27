@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import QuestModal from "@/components/academy/QuestModal";
 import {
   GraduationCap,
   Trophy,
@@ -156,29 +157,124 @@ const DIFFICULTY_STYLE: Record<
    ══════════════════════════════════════════════════════════ */
 
 export default function AcademyPage() {
+  const [quests, setQuests] = useState<Quest[]>(QUESTS);
+  // const [loading, setLoading] = useState(true); // Removed as unused
   const [completedQuests, setCompletedQuests] = useState<number[]>([]);
   const [mintingId, setMintingId] = useState<number | null>(null);
   const [toastQuest, setToastQuest] = useState<Quest | null>(null);
+  
+  // Modal state
+  const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const totalEarned = completedQuests.length * 500;
-  const xpEarned = completedQuests.reduce((acc, id) => {
-    const q = QUESTS.find((q) => q.id === id);
-    return acc + (q?.xpReward ?? 0);
+  useEffect(() => {
+    // Determine category props based on category string
+    const getCategoryProps = (cat: string) => {
+        const found = QUESTS.find(q => q.category === cat);
+        if (found) return { color: found.categoryColor, icon: found.icon };
+        // Default
+        return { 
+            color: QUESTS[0].categoryColor, 
+            icon: <BookOpen size={22} />
+        };
+    };
+
+    fetch('http://localhost:8000/api/v1/academy/courses')
+      .then(res => res.json())
+      .then(data => {
+         const mapped = data.map((c: any) => {
+             const props = getCategoryProps(c.category);
+             return {
+                 id: c.id,
+                 category: c.category || "General",
+                 categoryColor: props.color,
+                 icon: props.icon,
+                 title: c.title,
+                 description: c.description,
+                 reward: `${c.reward} $ARTHA`,
+                 rewardAmount: c.reward,
+                 xpReward: Math.floor(c.reward / 4),
+                 difficulty: c.reward > 700 ? "Grandmaster" : (c.reward > 550 ? "Strategist" : "Initiate"),
+                 modules: Math.floor(c.reward / 100) + 2
+             };
+         });
+         setQuests(mapped);
+        })
+        .catch(err => {
+            console.error(err);
+        });
+    }, []);
+
+    const totalEarned = completedQuests.reduce((acc, id) => {
+      const q = quests.find(q => q.id === id);
+      return acc + (q?.rewardAmount || 0);
   }, 0);
+
+  const xpEarned = completedQuests.reduce((acc, id) => {
+    const q = quests.find((q) => q.id === id);
+    return acc + (q?.xpReward || 0);
+  }, 0);
+
   const XP_MAX = 800;
   const XP_CURRENT = 600 + xpEarned;
   const xpPct = Math.min((XP_CURRENT / XP_MAX) * 100, 100);
 
   async function handleClaimReward(id: number) {
     if (completedQuests.includes(id) || mintingId !== null) return;
+    
+    // Check wallet connection
+    let wallet: string | null = null;
+    if (typeof window !== "undefined" && (window as any).ethereum) {
+        try {
+            const accounts = await (window as any).ethereum.request({ method: "eth_requestAccounts" });
+            if (accounts.length > 0) wallet = accounts[0];
+        } catch (e) {
+            console.error(e);
+            return;
+        }
+    }
+
+    if (!wallet) {
+        alert("Please connect your wallet first!");
+        return;
+    }
+
     setMintingId(id);
-    await new Promise((r) => setTimeout(r, 2200));
-    setCompletedQuests((prev) => [...prev, id]);
-    setMintingId(null);
-    const q = QUESTS.find((q) => q.id === id) ?? null;
-    setToastQuest(q);
-    setTimeout(() => setToastQuest(null), 4500);
+    
+    try {
+        const res = await fetch(`http://localhost:8000/api/v1/academy/complete/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ wallet_address: wallet })
+        });
+        
+        if (!res.ok) throw new Error("Failed to complete course");
+        
+        // Success animation
+        await new Promise((r) => setTimeout(r, 2200));
+        
+        setCompletedQuests((prev) => [...prev, id]);
+        setMintingId(null);
+        
+        const q = quests.find((q) => q.id === id) ?? null;
+        setToastQuest(q);
+        
+        // Dispatch event to update Navbar balance
+        window.dispatchEvent(new Event("balanceUpdated"));
+        
+        setTimeout(() => setToastQuest(null), 4500);
+        
+    } catch (err: any) {
+        console.error(err);
+        setMintingId(null);
+    }
   }
+
+  const handleQuestClick = (quest: Quest) => {
+    // Open the detailed learning modal
+    setSelectedQuest(quest);
+    setIsModalOpen(true);
+  };
 
   return (
     <div className="relative max-w-[1400px] mx-auto space-y-8">
@@ -398,7 +494,7 @@ export default function AcademyPage() {
           <div className="h-2 w-2 rounded-full bg-amber-400" />
         </div>
         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-400/70">
-          Quest Board · {QUESTS.length - completedQuests.length} Active
+          Quest Board · {quests.length - completedQuests.length} Active
         </span>
         <div className="h-px flex-1 bg-gradient-to-r from-amber-500/15 to-transparent" />
         <BookOpen size={13} className="text-slate-700" />
@@ -406,7 +502,7 @@ export default function AcademyPage() {
 
       {/* ── QUEST GRID ───────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {QUESTS.map((quest, idx) => {
+        {quests.map((quest, idx) => {
           const isCompleted = completedQuests.includes(quest.id);
           const isMinting = mintingId === quest.id;
           const isLocked = mintingId !== null && mintingId !== quest.id;
@@ -606,7 +702,7 @@ export default function AcademyPage() {
                           animate={{ opacity: [1, 0.5, 1] }}
                           transition={{ duration: 1.2, repeat: Infinity }}
                         >
-                          Minting on-chain…
+                          Studying Module & Minting Certificate...
                         </motion.span>
                       </motion.div>
                     ) : (
@@ -615,7 +711,7 @@ export default function AcademyPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={() => handleClaimReward(quest.id)}
+                        onClick={() => handleQuestClick(quest)}
                         disabled={isLocked}
                         whileHover={!isLocked ? { scale: 1.03 } : {}}
                         whileTap={!isLocked ? { scale: 0.97 } : {}}
@@ -660,7 +756,7 @@ export default function AcademyPage() {
                           className="text-[13px] font-black uppercase tracking-[0.1em]"
                           style={{ color: isLocked ? "#475569" : "#fbbf24" }}
                         >
-                          {isLocked ? "Another Quest Active" : "Complete Quest & Claim"}
+                          {isLocked ? "Another Quest Active" : "Start Learning Module"}
                         </span>
                         {!isLocked && (
                           <ArrowUpRight
@@ -680,7 +776,7 @@ export default function AcademyPage() {
 
       {/* ── COMPLETION BANNER ────────────────────────────── */}
       <AnimatePresence>
-        {completedQuests.length === QUESTS.length && (
+        {quests.length > 0 && completedQuests.length === quests.length && (
           <motion.div
             initial={{ opacity: 0, y: 32, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -736,6 +832,18 @@ export default function AcademyPage() {
               </div>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedQuest && (
+            <QuestModal 
+                quest={selectedQuest} 
+                isOpen={isModalOpen} 
+                onClose={() => setIsModalOpen(false)} 
+                onComplete={handleClaimReward}
+                isAlreadyCompleted={completedQuests.includes(selectedQuest.id)}
+            />
         )}
       </AnimatePresence>
     </div>
