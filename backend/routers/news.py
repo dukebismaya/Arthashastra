@@ -7,15 +7,29 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from google import genai
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/news", tags=["Market Intel — News Sentiment"])
 
-# ────────────────── Gemini Client ─────────────────────────────
+# ────────────────── Gemini Client (lazy) ──────────────────────
 
-_gemini = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-_MODEL = "gemini-2.0-flash"
+_gemini: genai.Client | None = None
+_MODEL = "gemini-flash-latest"
+
+
+def _get_gemini_client() -> genai.Client:
+    """Return the Gemini client, creating it on first call."""
+    global _gemini
+    if _gemini is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise HTTPException(
+                status_code=503,
+                detail="GEMINI_API_KEY is not configured on the server.",
+            )
+        _gemini = genai.Client(api_key=api_key)
+    return _gemini
 
 _CHANAKYA_PROMPT = (
     "You are Chanakya, a master financial strategist. "
@@ -115,8 +129,9 @@ async def _get_chanakya_logic(headline: str, sentiment: str) -> str:
 
     for attempt in range(3):
         try:
+            client = _get_gemini_client()
             response = await asyncio.to_thread(
-                _gemini.models.generate_content,
+                client.models.generate_content,
                 model=_MODEL,
                 contents=prompt,
             )
