@@ -14,9 +14,24 @@ router = APIRouter(prefix="/predict", tags=["Chanakya AI"])
 
 # ────────────────── Gemini Client ─────────────────────────────
 
-_gemini = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# Lazy-init: don't create at import time (crashes if GEMINI_API_KEY is unset)
+_gemini: genai.Client | None = None
 # _MODEL = "gemini-2.0-flash"  # Rate limited / Quota exceeded
 _MODEL = "gemini-flash-latest" # Using latest stable flash model
+
+
+def _get_gemini_client() -> genai.Client:
+    """Return the Gemini client, creating it on first call."""
+    global _gemini
+    if _gemini is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise HTTPException(
+                status_code=503,
+                detail="GEMINI_API_KEY is not configured on the server.",
+            )
+        _gemini = genai.Client(api_key=api_key)
+    return _gemini
 
 _CHANAKYA_PROMPT = (
     "You are Chanakya, a master financial strategist. "
@@ -72,8 +87,9 @@ async def _get_chanakya_reasoning(
     last_error = None
     for attempt in range(3):
         try:
+            client = _get_gemini_client()
             response = await asyncio.to_thread(
-                _gemini.models.generate_content,
+                client.models.generate_content,
                 model=_MODEL,
                 contents=prompt,
             )
