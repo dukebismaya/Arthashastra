@@ -13,6 +13,9 @@ import {
   Landmark,
   Sparkles,
 } from "lucide-react";
+import { useUserData } from "@/hooks/useUserData";
+import PortfolioInsightsWidget from "@/components/dashboard/PortfolioInsightsWidget";
+import PredictionHistoryWidget from "@/components/dashboard/PredictionHistoryWidget";
 
 /* ── Mock transaction history ────────────────────── */
 const MOCK_TRANSACTIONS = [
@@ -59,38 +62,18 @@ const MOCK_TRANSACTIONS = [
 ];
 
 export default function TreasuryPage() {
+  const { user, backendId, isAuthenticated, balance: hookBalance, refreshBalance } = useUserData();
   const [balance, setBalance] = useState<number>(0);
-  const [walletAddress, setWalletAddress] = useState<string>("");
+  const walletAddress = backendId ?? "";
+  const walletConnected = isAuthenticated;
   const [isDepositing, setIsDepositing] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
-  const [walletConnected, setWalletConnected] = useState(false);
   const [depositSuccess, setDepositSuccess] = useState(false);
 
+  // Sync balance from hook
   useEffect(() => {
-    async function syncWallet() {
-      try {
-        if (typeof window !== "undefined" && (window as any).ethereum) {
-          const accounts: string[] = await (window as any).ethereum.request({
-            method: "eth_accounts",
-          });
-          if (accounts[0]) {
-            setWalletAddress(accounts[0]);
-            setWalletConnected(true);
-            const res = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL}/api/v1/user/${accounts[0]}`
-            );
-            if (res.ok) {
-              const data = await res.json();
-              setBalance(data.portfolio_balance);
-            }
-          }
-        }
-      } catch {
-        /* wallet sync silently handled */
-      }
-    }
-    syncWallet();
-  }, []);
+    setBalance(hookBalance);
+  }, [hookBalance]);
 
   async function handleDeposit() {
     const amt = parseFloat(depositAmount);
@@ -113,6 +96,7 @@ export default function TreasuryPage() {
         setBalance(data.new_balance);
         setDepositAmount("");
         setDepositSuccess(true);
+        refreshBalance(); // sync hook state
         setTimeout(() => setDepositSuccess(false), 3000);
       }
     } catch {
@@ -195,7 +179,7 @@ export default function TreasuryPage() {
                 <div className="mt-3 flex items-center gap-2">
                   <ShieldCheck size={14} className="text-emerald-500" />
                   <span className="text-[11px] text-slate-500 font-mono truncate max-w-[300px]">
-                    {walletAddress}
+                    {user?.displayName ?? user?.email ?? walletAddress}
                   </span>
                 </div>
               )}
@@ -318,6 +302,12 @@ export default function TreasuryPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── User-Tied Insights ──────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <PortfolioInsightsWidget userId={backendId} />
+        <PredictionHistoryWidget userId={backendId} />
       </div>
     </div>
   );

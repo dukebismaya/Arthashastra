@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useUserData } from "@/hooks/useUserData";
 import {
   GraduationCap,
   Trophy,
@@ -147,9 +148,10 @@ function renderContent(text: string) {
    ══════════════════════════════════════════════════════════ */
 
 export default function AcademyPage() {
-  // ── Wallet ──
-  const [walletAddress, setWalletAddress] = useState("");
-  const [walletConnected, setWalletConnected] = useState(false);
+  // ── User identity (Firebase + Web3) ──
+  const { user, backendId, isAuthenticated, isLoading: authLoading } = useUserData();
+  const walletAddress = backendId ?? "";
+  const walletConnected = isAuthenticated;
 
   // ── Data ──
   const [courses, setCourses] = useState<CourseSummary[]>([]);
@@ -169,44 +171,6 @@ export default function AcademyPage() {
 
   // ── Toast ──
   const [toast, setToast] = useState<{ message: string; sub: string; reward?: string; xp?: number } | null>(null);
-
-  /* ── Connect wallet ────────────────────────────────── */
-  const connectWallet = useCallback(async () => {
-    try {
-      if (typeof window !== "undefined" && (window as unknown as { ethereum?: { request: (args: { method: string }) => Promise<string[]> } }).ethereum) {
-        const eth = (window as unknown as { ethereum: { request: (args: { method: string }) => Promise<string[]> } }).ethereum;
-        const accounts = await eth.request({ method: "eth_requestAccounts" });
-        if (accounts[0]) {
-          setWalletAddress(accounts[0]);
-          setWalletConnected(true);
-          // Ensure user exists in DB
-          await fetch(`${API}/api/v1/user/${accounts[0]}`);
-        }
-      }
-    } catch {
-      /* silent */
-    }
-  }, []);
-
-  /* ── Auto-connect if already connected ─────────────── */
-  useEffect(() => {
-    async function autoConnect() {
-      try {
-        if (typeof window !== "undefined" && (window as unknown as { ethereum?: { request: (args: { method: string }) => Promise<string[]> } }).ethereum) {
-          const eth = (window as unknown as { ethereum: { request: (args: { method: string }) => Promise<string[]> } }).ethereum;
-          const accounts = await eth.request({ method: "eth_accounts" });
-          if (accounts[0]) {
-            setWalletAddress(accounts[0]);
-            setWalletConnected(true);
-            await fetch(`${API}/api/v1/user/${accounts[0]}`);
-          }
-        }
-      } catch {
-        /* silent */
-      }
-    }
-    autoConnect();
-  }, []);
 
   /* ── Fetch courses ─────────────────────────────────── */
   const fetchCourses = useCallback(async () => {
@@ -395,8 +359,8 @@ export default function AcademyPage() {
         )}
       </AnimatePresence>
 
-      {/* ── WALLET CONNECT BANNER (if not connected) ──── */}
-      {!walletConnected && (
+      {/* ── SIGN-IN BANNER (if not authenticated) ──── */}
+      {!walletConnected && !authLoading && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -413,23 +377,10 @@ export default function AcademyPage() {
                 <Wallet size={24} className="text-amber-400" />
               </div>
               <div>
-                <p className="text-lg font-black text-slate-100">Connect Your Wallet</p>
-                <p className="text-[13px] text-slate-500">Connect MetaMask to track progress and earn $ARTHA rewards</p>
+                <p className="text-lg font-black text-slate-100">Sign In to Begin</p>
+                <p className="text-[13px] text-slate-500">Use the Sign In button in the navbar to connect with Google, Email, or MetaMask</p>
               </div>
             </div>
-            <motion.button
-              onClick={connectWallet}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-6 py-3 rounded-xl text-[13px] font-black uppercase tracking-[0.1em]"
-              style={{
-                background: "linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05))",
-                border: "1px solid rgba(212,175,55,0.3)",
-                color: "#fbbf24",
-              }}
-            >
-              Connect Wallet
-            </motion.button>
           </div>
         </motion.div>
       )}
@@ -474,7 +425,10 @@ export default function AcademyPage() {
                       {rankLabel}
                     </span>
                   </h1>
-                  <p className="mt-0.5 text-[12px] text-slate-500 font-medium">Kautilya&apos;s Academy &middot; Ancient Wealth Protocol</p>
+                  <p className="mt-0.5 text-[12px] text-slate-500 font-medium">
+                    {user?.displayName ?? user?.email ?? (user?.walletAddress ? `${user.walletAddress.slice(0, 6)}…${user.walletAddress.slice(-4)}` : "Kautilya\u0027s Academy")}
+                    {" "}&middot; Ancient Wealth Protocol
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-2xl px-5 py-3" style={{ background: "rgba(212,175,55,0.06)", border: "1px solid rgba(212,175,55,0.15)" }}>

@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
+import KuberGuide from "@/components/ui/KuberGuide";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -21,6 +22,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="relative z-10">
           {children}
         </div>
+
+        <KuberGuide />
       </>
     );
   }
@@ -46,6 +49,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </main>
         </div>
       </div>
+
+      <KuberGuide />
     </>
   );
 }

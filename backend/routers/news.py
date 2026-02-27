@@ -181,6 +181,6 @@ async def get_news_sentiment():
 
     return SentimentResponse(
         analyzed_at=now,
-        model="FinBERT-v3 + Chanakya (Gemini 1.5 Flash)",
+        model="FinBERT-v3 + Chanakya (Gemini 2.0 Flash)",
         articles=articles,
     )

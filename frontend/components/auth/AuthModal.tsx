@@ -234,7 +234,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             {/* Close button */}
             <button
               onClick={handleClose}
-              className="absolute right-4 top-4 z-10 rounded-lg p-1.5 text-slate-600 hover:text-slate-300 hover:bg-slate-800/40 transition-all duration-200"
+              className="absolute right-4 top-4 z-20 rounded-lg p-1.5 text-slate-600 hover:text-slate-300 hover:bg-slate-800/40 transition-all duration-200"
             >
               <X size={16} />
             </button>

@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-    LayoutDashboard,
+    Home,
     GraduationCap,
     Swords,
     Newspaper,
     Landmark,
+    MessageSquare,
     ChevronLeft,
     ChevronRight,
     Sparkles,
@@ -18,9 +19,9 @@ import BookLogo from "@/components/ui/BookLogo";
 
 const navItems = [
     {
-        label: "Dashboard",
+        label: "Home",
         href: "/",
-        icon: LayoutDashboard,
+        icon: Home,
         description: "Command Center",
     },
     {
@@ -40,6 +41,12 @@ const navItems = [
         href: "/market-intel",
         icon: Newspaper,
         description: "News Analysis",
+    },
+    {
+        label: "Community",
+        href: "/community",
+        icon: MessageSquare,
+        description: "Trading Floor",
     },
     {
         label: "Treasury",

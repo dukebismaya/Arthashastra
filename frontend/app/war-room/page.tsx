@@ -12,6 +12,9 @@ import {
   Loader2,
   CheckCircle2,
 } from "lucide-react";
+import { useUserData } from "@/hooks/useUserData";
+import PredictionHistoryWidget, { savePrediction } from "@/components/dashboard/PredictionHistoryWidget";
+import PortfolioInsightsWidget from "@/components/dashboard/PortfolioInsightsWidget";
 
 interface AnalysisResult {
   ticker: string;
@@ -24,6 +27,7 @@ interface AnalysisResult {
 }
 
 export default function WarRoomPage() {
+  const { backendId } = useUserData();
   const [wager, setWager] = useState("");
   const [isPredicting, setIsPredicting] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
@@ -37,7 +41,7 @@ export default function WarRoomPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ticker: "AAPL",
+          ticker: "RELIANCE",
           direction,
           wager: parseFloat(wager) || 1000,
         }),
@@ -46,6 +50,19 @@ export default function WarRoomPage() {
       if (!res.ok) throw new Error("Prediction request failed");
       const data: AnalysisResult = await res.json();
       setAnalysisResult(data);
+
+      // Save to user's prediction history
+      if (backendId) {
+        savePrediction(backendId, {
+          ticker: data.ticker,
+          direction: data.direction as "bullish" | "bearish",
+          wager: data.wager,
+          confidence: data.confidence_score,
+          status: data.status,
+        });
+        // Notify other widgets
+        window.dispatchEvent(new Event("arthashastra:prediction"));
+      }
     } catch {
       /* prediction error silently handled */
     } finally {
@@ -110,7 +127,7 @@ export default function WarRoomPage() {
             {/* TradingView Live Chart */}
             <div className="overflow-hidden rounded-xl">
               <iframe
-                src="https://s.tradingview.com/widgetembed/?symbol=NASDAQ:AAPL&interval=D&theme=dark&style=1&hidesidetoolbar=1"
+                src="https://s.tradingview.com/widgetembed/?symbol=BSE:RELIANCE&interval=D&theme=dark&style=1&hidesidetoolbar=1&timezone=Asia%2FKolkata"
                 width="100%"
                 height="450"
                 frameBorder="0"
@@ -364,13 +381,19 @@ export default function WarRoomPage() {
 
             <p className="mt-4 text-center text-[11px] text-slate-700">
               {analysisResult
-                ? "Chanakya AI reasoning chain — powered by Gemini 1.5 Flash"
+                ? "Chanakya AI reasoning chain — powered by Gemini 2.0 Flash"
                 : isPredicting
-                  ? "Querying Gemini 1.5 Flash for real-time analysis…"
+                  ? "Querying Gemini 2.0 Flash for real-time analysis…"
                   : "AI reasoning chain appears here after analysis"}
             </p>
           </div>
         </div>
+      </div>
+
+      {/* ── User-Tied Widgets ───────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <PredictionHistoryWidget userId={backendId} />
+        <PortfolioInsightsWidget userId={backendId} />
       </div>
     </div>
   );
